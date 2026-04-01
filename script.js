@@ -592,6 +592,9 @@ function renderResults(data) {
   renderLinkedInHeadline(data.linkedin_headline);
   renderTailoringChecklist(data.tailoring_checklist);
 
+  // Render new ultra-premium sections
+  renderScoreProvisions(data.score_provisions, data.ats_score?.score ?? 0);
+
   // Wire up quick action buttons
   document.getElementById('downloadReportBtn')?.addEventListener('click', () => generatePDFReport(data));
   document.getElementById('copyReportBtn')?.addEventListener('click', () => copyFullReport(data));
@@ -1153,6 +1156,44 @@ function renderTailoringChecklist(items) {
   }</div>`;
 }
 
+/* ------------------------------------------------------------
+   SCORE PROVISIONS (shown when ATS < 70)
+   ------------------------------------------------------------ */
+function renderScoreProvisions(provisions, atsScore) {
+  const card  = document.getElementById('cardProvisions');
+  const intro = document.getElementById('provisionsIntro');
+  const el    = document.getElementById('provisionsContent');
+
+  if (!card || !el) return;
+
+  // Only show when ATS < 70
+  if (!provisions || !provisions.length || atsScore >= 70) {
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = 'block';
+  const gap = 70 - atsScore;
+  if (intro) {
+    intro.textContent = `Your ATS score is ${atsScore}% — ${gap} points below the 70% recruiter threshold. Here are 10 targeted actions to close that gap fast. Work through these from top to bottom; each one adds measurable score points.`;
+  }
+
+  el.innerHTML = `<div class="provisions-list">${
+    provisions.map(p => `
+      <div class="provision-item">
+        <div class="provision-num">${p.number}</div>
+        <div class="provision-body">
+          <div class="provision-effort">${escHtml(p.effort)}</div>
+          <div class="provision-title">${escHtml(p.title)}</div>
+          <div class="provision-action">${escHtml(p.action)}</div>
+          <div class="provision-example">💡 ${escHtml(p.example)}</div>
+        </div>
+        <div class="provision-impact">${escHtml(p.impact)}</div>
+      </div>
+    `).join('')
+  }</div>`;
+}
+
 /* ============================================================
    PDF REPORT GENERATOR (jsPDF)
    ============================================================ */
@@ -1470,6 +1511,63 @@ async function generatePDFReport(data) {
       rgb([70,70,100]); font(7.5, 'normal'); doc.text(detL, M + 18, y + 5);
       y += detL.length * 4.5 + 11;
     });
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 9: SCORE BOOST ACTION PLAN (only when ATS < 70)
+    // ══════════════════════════════════════════════════════════
+    const provisions = data.score_provisions || [];
+    if (provisions.length && (data.ats_score?.score ?? 100) < 70) {
+      newPage();
+      const atsS = data.ats_score?.score ?? 0;
+      rgb(DARK); font(15, 'bold'); doc.text('Score Boost Action Plan', M, y); y += 3;
+      rgb(RED, 'draw'); doc.setLineWidth(0.8); doc.line(M, y, M + 72, y); y += 5;
+
+      // Intro blurb
+      const introL = doc.splitTextToSize(
+        `Your ATS score is ${atsS}% — ${70 - atsS} points below the 70% recruiter threshold. Work through the actions below to close the gap.`,
+        CW
+      );
+      rgb([100,100,130]); font(8.5, 'normal'); doc.text(introL, M, y);
+      y += introL.length * 4.8 + 6;
+
+      provisions.forEach(p => {
+        const actionL  = doc.splitTextToSize(p.action, CW - 50);
+        const exampleL = doc.splitTextToSize('Ex: ' + p.example, CW - 50);
+        const blockH   = actionL.length * 4.5 + exampleL.length * 4 + 20;
+        check(blockH);
+
+        // Row background
+        rgb(RED.map(c => Math.min(255, c + 190)), 'fill');
+        doc.roundedRect(M, y - 4, CW, blockH, 2, 2, 'F');
+
+        // Number badge
+        rgb(RED, 'fill'); doc.roundedRect(M + 1, y - 3, 10, 10, 2, 2, 'F');
+        rgb(WHITE); font(7, 'bold'); doc.text(String(p.number), M + 6, y + 4, { align: 'center' });
+
+        // Effort tag
+        rgb(GOLD); font(6.5, 'bold'); doc.text(p.effort, M + 14, y);
+
+        // Title
+        rgb(DARK); font(9, 'bold'); doc.text(p.title, M + 14, y + 5.5);
+
+        // Action
+        rgb([60,60,90]); font(7.5, 'normal'); doc.text(actionL, M + 14, y + 11);
+
+        // Example
+        const exY = y + 11 + actionL.length * 4.5;
+        rgb([120,100,50]); font(7, 'italic'); doc.text(exampleL, M + 14, exY);
+
+        // Impact badge (right side)
+        const impactText = p.impact;
+        font(7, 'bold');
+        const impW = doc.getTextWidth(impactText) + 6;
+        rgb([34,197,94].map(c => Math.min(255, c + 180)), 'fill');
+        doc.roundedRect(W - M - impW - 1, y - 3, impW + 2, 9, 2, 2, 'F');
+        rgb([20,100,40]); doc.text(impactText, W - M - impW / 2, y + 3, { align: 'center' });
+
+        y += blockH + 3;
+      });
+    }
 
     // ── Save ──
     doc.save(`King-CV-Report-${Date.now()}.pdf`);
