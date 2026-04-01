@@ -793,19 +793,28 @@ function renderBulletPoints(bullets) {
     return;
   }
 
-  el.innerHTML = bullets.map(b => `
+  // Update card badge to show count
+  const badge = document.querySelector('#cardBullets .card-badge');
+  if (badge) badge.textContent = bullets.length + ' Rewrites';
+
+  el.innerHTML = `
+    <p class="bullets-intro">${bullets.length} bullet points rewritten with strong action verbs and quantified outcomes — copy these directly into your CV.</p>
+    ${bullets.map((b, i) => `
     <div class="bullet-item">
-      <div class="bullet-before">
-        <span class="bullet-label label-before">Before</span>
-        <span class="bullet-text">${escHtml(b.original)}</span>
-      </div>
-      <div class="bullet-divider"></div>
-      <div class="bullet-after">
-        <span class="bullet-label label-after">After</span>
-        <span class="bullet-text">${escHtml(b.improved)}</span>
+      <div class="bullet-num">${i + 1}</div>
+      <div class="bullet-content">
+        <div class="bullet-before">
+          <span class="bullet-label label-before">Before</span>
+          <span class="bullet-text">${escHtml(b.original)}</span>
+        </div>
+        <div class="bullet-divider"></div>
+        <div class="bullet-after">
+          <span class="bullet-label label-after">After</span>
+          <span class="bullet-text">${escHtml(b.improved)}</span>
+        </div>
       </div>
     </div>
-  `).join('');
+  `).join('')}`;
 }
 
 /* ------------------------------------------------------------

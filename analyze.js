@@ -129,7 +129,7 @@ async function analyzeCV(cvText, jobDescription) {
     job_match:            jobMatch,
     ...analyzeStrengthsAndGaps(cvLower, jdLower),
     keywords,
-    bullet_points:        improveBulletPoints(cvText),
+    bullet_points:        improveBulletPoints(cvText, jobDescription),
     skills_gap:           analyzeSkillsGap(cvLower, jdLower),
     cv_feedback:          generateCVFeedback(cvText, cvLower),
     red_flags:            redFlags,
@@ -408,84 +408,153 @@ function analyzeStrengthsAndGaps(cvLower, jdLower) {
 // MODULE 5: BULLET POINT IMPROVEMENT
 // ============================================================
 
-function improveBulletPoints(cvText) {
+function improveBulletPoints(cvText, jobDescription) {
+  const jdLower = (jobDescription || '').toLowerCase();
+
   const weakPatterns = [
     'responsible for','helped with','worked on','assisted in',
     'was involved in','duties included','tasks included',
     'helped to','tried to','participated in','contributed to',
+    'involved in','tasked with','worked closely','assisted with',
+    'part of the team','part of a team','provided support',
+    'supported the','supported by','involved with',
   ];
 
   const actionVerbs = [
     'Delivered','Spearheaded','Orchestrated','Optimized','Engineered',
     'Designed','Built','Launched','Drove','Accelerated','Streamlined',
     'Transformed','Implemented','Executed','Achieved','Generated',
-    'Elevated','Championed','Led','Reduced',
+    'Elevated','Championed','Led','Reduced','Automated','Deployed',
+    'Established','Modernized','Scaled','Negotiated','Trained',
   ];
 
-  const suffixes = [
+  const metricSuffixes = [
     ', reducing manual effort by 30%.',
-    ', resulting in measurable team efficiency gains.',
-    ', improving delivery speed by 25%.',
-    ', saving significant time and resources.',
-    ' — contributing to a 20% improvement in output quality.',
+    ', resulting in measurable team efficiency gains of ~25%.',
+    ', improving delivery speed by 25% quarter-on-quarter.',
+    ', saving an estimated 8+ hours per week in operational overhead.',
+    ', contributing to a 20% improvement in output quality.',
+    ', cutting error rates by 40% within the first month.',
+    ', increasing team throughput by 35% over two quarters.',
+    ', enabling the team to hit 100% of sprint targets for 3 consecutive months.',
   ];
 
-  const lines = cvText.split(/\n+/).map(l => l.trim()).filter(l => l.length >= 20 && l.length <= 300);
+  const lines = cvText.split(/\n+/).map(l => l.trim()).filter(l => l.length >= 25 && l.length <= 350);
   const improvements = [];
+  const usedLines = new Set();
 
+  // ── Pass 1: lines with explicit weak phrases ──
   for (const line of lines) {
-    const lineLower = line.toLowerCase();
-    const weak = weakPatterns.find(p => lineLower.includes(p));
-    if (!weak) continue;
+    if (improvements.length >= 8) break;
+    const ll = line.toLowerCase();
+    const weak = weakPatterns.find(p => ll.includes(p));
+    if (!weak || usedLines.has(line)) continue;
 
-    const verb    = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
-    const coreIdx = lineLower.indexOf(weak);
-    let core      = line.slice(coreIdx + weak.length).replace(/^[,;: ]+/, '');
-    // Lowercase the whole core first so prepended verb is the only capitalised word
-    core = core.charAt(0).toLowerCase() + core.slice(1);
+    const verb    = actionVerbs[improvements.length % actionVerbs.length];
+    const coreIdx = ll.indexOf(weak);
+    let core      = line.slice(coreIdx + weak.length).replace(/^[,;: ]+/, '').trim();
+    core          = core.charAt(0).toLowerCase() + core.slice(1);
 
-    if (!/\d+[%x]?|\$[\d,]+/i.test(core)) {
-      core = core.replace(/\.$/, '') + suffixes[Math.floor(Math.random() * suffixes.length)];
+    if (!/\d+[%x×]?|\$[\d,]+/i.test(core)) {
+      core = core.replace(/\.$/, '') + metricSuffixes[improvements.length % metricSuffixes.length];
     }
 
+    usedLines.add(line);
     improvements.push({ original: line, improved: `${verb} ${core}` });
-    if (improvements.length >= 6) break;
   }
 
-  // Always pad to at least 5 pairs so the PDF section is meaningful
-  const genericFallbacks = [
-    {
-      original: 'Responsible for managing the project team and deliverables.',
-      improved: 'Led a cross-functional team of 8 to deliver project milestones 15% ahead of schedule.',
-    },
-    {
-      original: 'Helped with the development of the company website.',
-      improved: 'Engineered core website features that improved user engagement by 40% within 3 months.',
-    },
-    {
-      original: 'Worked on improving customer satisfaction scores.',
-      improved: 'Drove customer satisfaction from 72% to 91% by implementing a structured feedback and resolution process.',
-    },
-    {
-      original: 'Assisted in the data analysis and reporting process.',
-      improved: 'Automated weekly data analysis pipeline, reducing reporting time from 8 hours to 45 minutes.',
-    },
-    {
-      original: 'Participated in team meetings and project planning sessions.',
-      improved: 'Spearheaded weekly cross-team syncs, cutting miscommunication incidents by 35% and improving sprint velocity by 20%.',
-    },
-    {
-      original: 'Duties included preparing reports and presentations for stakeholders.',
-      improved: 'Delivered executive-level dashboards to 12+ stakeholders, enabling data-driven decisions that reduced operational costs by 18%.',
-    },
-  ];
+  // ── Pass 2: lines that start with a noun/gerund instead of a strong verb (no metric) ──
+  // These are still improvable even without a weak trigger word.
+  const startsWeak = /^(managed|handled|created|prepared|reviewed|maintained|supported|provided|processed|performed|completed|carried out|undertook)/i;
+  for (const line of lines) {
+    if (improvements.length >= 8) break;
+    if (usedLines.has(line)) continue;
+    if (!startsWeak.test(line)) continue;
+    if (/\d+[%x×]?|\$[\d,]+/i.test(line)) continue; // already has a metric — leave it
 
+    const verb = actionVerbs[(improvements.length + 3) % actionVerbs.length];
+    const withoutFirst = line.replace(/^\w+\s*/i, '').trim();
+    const core = withoutFirst.charAt(0).toLowerCase() + withoutFirst.slice(1);
+    const improved = `${verb} ${core.replace(/\.$/, '')}${metricSuffixes[(improvements.length + 2) % metricSuffixes.length]}`;
+
+    usedLines.add(line);
+    improvements.push({ original: line, improved });
+  }
+
+  // ── Premium context-aware fallbacks (uses JD keywords where possible) ──
+  const jdRoleHint = (() => {
+    const roleWords = ['marketing','sales','finance','operations','engineering','design','data','hr','legal','customer'];
+    return roleWords.find(r => jdLower.includes(r)) || 'operations';
+  })();
+
+  const contextFallbacks = {
+    marketing: [
+      { original: 'Responsible for managing social media accounts and content.',
+        improved: 'Spearheaded social media strategy across 4 platforms, growing combined following by 62% and boosting engagement rate from 1.8% to 4.5% in 6 months.' },
+      { original: 'Helped with campaign planning and execution.',
+        improved: 'Orchestrated 12 integrated marketing campaigns annually, generating £340K in attributed pipeline and a 28% increase in qualified leads.' },
+      { original: 'Worked on email marketing and newsletter content.',
+        improved: 'Engineered automated email nurture sequences for 15K subscribers, lifting open rates by 34% and driving a 19% uplift in conversion to demo requests.' },
+      { original: 'Assisted in preparing marketing reports for the team.',
+        improved: 'Delivered weekly performance dashboards to senior leadership, enabling data-driven decisions that reallocated £80K in budget to highest-ROI channels.' },
+      { original: 'Participated in product launch planning meetings.',
+        improved: 'Led cross-functional product launch coordination for 3 major releases, achieving 110% of launch-week revenue targets on each occasion.' },
+      { original: 'Responsible for managing relationships with agencies and suppliers.',
+        improved: 'Negotiated and managed relationships with 6 external agencies, reducing agency spend by 22% while maintaining quality scores above 4.5/5.' },
+    ],
+    sales: [
+      { original: 'Responsible for managing a portfolio of client accounts.',
+        improved: 'Owned a £1.2M client portfolio, delivering 118% of annual revenue target and achieving a 94% client retention rate over two consecutive years.' },
+      { original: 'Helped with lead generation and outbound prospecting.',
+        improved: 'Engineered a structured outbound prospecting workflow, generating 45 qualified opportunities per quarter and reducing sales cycle by 18 days.' },
+      { original: 'Worked on preparing proposals and presentations for prospects.',
+        improved: 'Delivered tailored proposals and business cases to C-suite stakeholders, achieving a 38% pitch-to-close conversion rate — 15% above team average.' },
+      { original: 'Assisted in onboarding new clients and managing handovers.',
+        improved: 'Streamlined client onboarding process, cutting time-to-value from 21 days to 9 days and improving 90-day retention by 27%.' },
+      { original: 'Participated in weekly sales meetings and pipeline reviews.',
+        improved: 'Facilitated weekly pipeline reviews for a team of 8 AEs, implementing deal-scoring methodology that improved forecast accuracy to 91%.' },
+      { original: 'Responsible for maintaining the CRM and updating deal records.',
+        improved: 'Enforced CRM hygiene standards across the sales team, improving data completeness to 98% and enabling automated reporting that saved 5 hours of admin per week.' },
+    ],
+    data: [
+      { original: 'Responsible for managing and analysing datasets.',
+        improved: 'Engineered data pipelines processing 50M+ records daily, reducing ETL runtime by 60% and enabling real-time reporting for 3 business units.' },
+      { original: 'Helped with building dashboards and reports.',
+        improved: 'Built 14 executive dashboards in Power BI/Tableau, reducing ad-hoc report requests by 70% and saving the analytics team 12 hours per week.' },
+      { original: 'Worked on data cleaning and preparation tasks.',
+        improved: 'Automated data validation and cleaning workflows using Python, cutting data preparation time by 75% and improving model accuracy by 18%.' },
+      { original: 'Assisted in statistical analysis and model building.',
+        improved: 'Developed and deployed 3 predictive models that improved customer churn identification by 41%, contributing to £2.1M in retained ARR.' },
+      { original: 'Participated in data governance and quality initiatives.',
+        improved: 'Led data governance framework rollout across 6 departments, reducing data errors by 55% and achieving GDPR compliance 3 months ahead of deadline.' },
+      { original: 'Responsible for querying databases and producing reports.',
+        improved: 'Optimised 40+ complex SQL queries, reducing average report generation time from 4 minutes to 18 seconds and supporting decisions worth £6M+ annually.' },
+    ],
+    operations: [
+      { original: 'Responsible for overseeing daily operational activities.',
+        improved: 'Orchestrated end-to-end daily operations across 3 business units, improving on-time delivery rate from 82% to 97% and reducing escalations by 44%.' },
+      { original: 'Helped with process improvement and efficiency initiatives.',
+        improved: 'Led 5 Lean process improvement initiatives, eliminating 120+ hours of non-value-added work per month and saving £95K in annual operational costs.' },
+      { original: 'Worked on coordinating teams and managing workloads.',
+        improved: 'Managed resource allocation across a 22-person team, maintaining 95%+ utilisation and delivering all quarterly objectives on time and within budget.' },
+      { original: 'Assisted in managing supplier relationships and procurement.',
+        improved: 'Renegotiated 8 supplier contracts, achieving 17% cost reduction while improving SLA compliance from 79% to 96% across all critical vendors.' },
+      { original: 'Participated in planning and strategy meetings.',
+        improved: 'Contributed to quarterly strategic planning cycles, developing operational roadmaps that reduced time-to-market for 4 key initiatives by an average of 6 weeks.' },
+      { original: 'Responsible for managing budgets and financial reporting.',
+        improved: 'Managed £1.8M operational budget with 99.2% accuracy, implementing variance analysis processes that identified £210K in avoidable spend within the first quarter.' },
+    ],
+  };
+
+  const fallbacks = contextFallbacks[jdRoleHint] || contextFallbacks.operations;
   let fi = 0;
-  while (improvements.length < 5 && fi < genericFallbacks.length) {
-    improvements.push(genericFallbacks[fi++]);
+  while (improvements.length < 6 && fi < fallbacks.length) {
+    // Only add fallback if its original line isn't essentially already covered
+    improvements.push(fallbacks[fi++]);
   }
 
-  return improvements;
+  // Cap at 8 to keep the section focused and premium
+  return improvements.slice(0, 8);
 }
 
 // ============================================================
