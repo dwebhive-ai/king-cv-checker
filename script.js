@@ -1195,7 +1195,7 @@ function renderScoreProvisions(provisions, atsScore) {
 }
 
 /* ============================================================
-   PDF REPORT GENERATOR (jsPDF)
+   PDF REPORT GENERATOR (jsPDF) — v2: compact, emoji-free, professional
    ============================================================ */
 async function generatePDFReport(data) {
   if (!window.jspdf) {
@@ -1208,371 +1208,404 @@ async function generatePDFReport(data) {
 
   try {
     const { jsPDF } = window.jspdf;
-    const doc  = new jsPDF('p', 'mm', 'a4');
-    const W    = 210, H = 297, M = 18, CW = W - M * 2;
-    let y      = M;
-    let pageN  = 1;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const W = 210, H = 297, M = 16, CW = W - M * 2;
+    let y = M, pageN = 1;
 
-    // ── Colour palette ──
-    const GOLD   = [212, 175, 55];
-    const DARK   = [8,   8,  15];
-    const WHITE  = [255,255,255];
-    const LGRAY  = [245,245,252];
-    const GREEN  = [34, 197, 94];
-    const RED    = [239, 68, 68];
-    const BLUE   = [59, 130,246];
-    const ORANGE = [249,115, 22];
+    // ── Palette ──
+    const GOLD   = [180, 148, 40];
+    const DKGOLD = [120, 96,  18];
+    const DARK   = [30,  30,  45];
+    const MID    = [70,  70,  90];
+    const WHITE  = [255, 255, 255];
+    const LGRAY  = [247, 247, 252];
+    const BGRAY  = [228, 228, 238];
+    const GREEN  = [22,  163, 74];
+    const LTGRN  = [240, 253, 244];
+    const RED    = [200, 40,  40];
+    const LTRED  = [254, 242, 242];
+    const BLUE   = [37,  99,  235];
+    const LTBLU  = [239, 246, 255];
+    const ORANGE = [217, 89,  0];
+    const LTOR   = [255, 247, 237];
 
-    // ── Helpers ──
-    const rgb  = (c, type = 'text') => type === 'fill' ? doc.setFillColor(...c) : type === 'draw' ? doc.setDrawColor(...c) : doc.setTextColor(...c);
-    const font = (size, style = 'normal') => { doc.setFontSize(size); doc.setFont('helvetica', style); };
+    // Strip non-ASCII (emojis, special chars) so Helvetica renders cleanly
+    const clean = s => String(s || '').replace(/[^\x00-\x7E]/g, '').replace(/\s+/g, ' ').trim();
 
+    const rgb  = (c, t = 'text') => t === 'fill' ? doc.setFillColor(...c) : t === 'draw' ? doc.setDrawColor(...c) : doc.setTextColor(...c);
+    const font = (sz, st = 'normal') => { doc.setFontSize(sz); doc.setFont('helvetica', st); };
+    const txt  = (s, x, xOpts) => doc.text(clean(s), x, y, xOpts);
+
+    // ── Footer ──
     function footer() {
-      rgb(GOLD, 'fill'); doc.rect(0, H - 7, W, 7, 'F');
-      rgb([8,8,15]); font(7);
-      doc.text('King CV Checker  |  Built by Digital Web Hive', M, H - 2);
-      doc.text(`Page ${pageN}`, W - M, H - 2, { align: 'right' });
+      rgb(GOLD, 'fill'); doc.rect(0, H - 8, W, 8, 'F');
+      rgb(DARK); font(7);
+      doc.text('King CV Checker  |  Built by Digital Web Hive', M, H - 2.5);
+      doc.text(`Page ${pageN}`, W - M, H - 2.5, { align: 'right' });
     }
 
+    // ── New page (white + thin gold left bar) ──
     function newPage() {
       doc.addPage(); pageN++; y = M;
       rgb(WHITE, 'fill'); doc.rect(0, 0, W, H, 'F');
-      // Left accent bar
-      rgb([240, 230, 180], 'fill'); doc.rect(0, 0, 5, H, 'F');
+      rgb(GOLD, 'fill');  doc.rect(0, 0, 4, H, 'F');
       footer();
     }
 
-    function check(need) { if (y + need > H - 12) newPage(); }
+    // ── Space check — add page if needed ──
+    function check(need) { if (y + need > H - 11) newPage(); }
 
-    function sectionHead(emoji, title, color) {
-      check(14); y += 4;
-      rgb(color.map(c => Math.round(c * 0.12 + 255 * 0.88)), 'fill');
-      doc.roundedRect(M, y - 4, CW, 10, 2, 2, 'F');
-      rgb(color); font(10, 'bold');
-      doc.text(`${emoji}  ${title}`, M + 4, y + 3);
-      y += 11;
+    // ── Section heading (no emoji — colored accent bar) ──
+    function sectionHead(title, color, light) {
+      check(11); y += 3;
+      rgb(light, 'fill'); doc.roundedRect(M, y - 3, CW, 9, 1.5, 1.5, 'F');
+      rgb(color, 'fill'); doc.rect(M, y - 3, 3, 9, 'F');
+      rgb(color); font(9, 'bold');
+      doc.text(title.toUpperCase(), M + 7, y + 3.2);
+      y += 10;
     }
 
-    function bullet(text, indent = 0, color = [70, 70, 100]) {
-      check(10);
-      const lines = doc.splitTextToSize(text, CW - indent - 6);
-      rgb(color); font(8.5, 'normal');
-      doc.text('•', M + indent + 1, y);
-      doc.text(lines, M + indent + 6, y);
-      y += lines.length * 4.8 + 1.5;
+    // ── Divider ──
+    function divider() {
+      check(5); y += 2;
+      rgb(BGRAY, 'draw'); doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 3;
     }
 
-    function tagRow(arr, bgColor, textColor) {
+    // ── Bullet item ──
+    function bullet(text, color) {
+      check(7);
+      const lines = doc.splitTextToSize(clean(text), CW - 8);
+      rgb(color || MID); font(8.5);
+      doc.text('-', M + 1, y);
+      doc.text(lines, M + 6, y);
+      y += lines.length * 4.6 + 1;
+    }
+
+    // ── Tag row ──
+    function tagRow(arr, bg, fg) {
       if (!arr || !arr.length) return;
-      const tagH = 6, tagPad = 3, gap = 2;
+      const H6 = 5.5, pad = 2.5, gap = 1.8;
       let x = M;
-      arr.slice(0, 20).forEach(tag => {
-        font(7, 'bold');
-        const tw = doc.getTextWidth(tag) + tagPad * 2;
-        if (x + tw > W - M) { x = M; y += tagH + gap; check(tagH + 4); }
-        rgb(bgColor, 'fill'); doc.roundedRect(x, y - 4.5, tw, tagH, 1.5, 1.5, 'F');
-        rgb(textColor); doc.text(tag, x + tagPad, y);
+      arr.slice(0, 24).forEach(tag => {
+        const t = clean(tag);
+        font(6.5, 'bold');
+        const tw = doc.getTextWidth(t) + pad * 2;
+        if (x + tw > W - M) { x = M; y += H6 + gap + 1; check(H6 + 4); }
+        rgb(bg, 'fill'); doc.roundedRect(x, y - 4, tw, H6, 1.2, 1.2, 'F');
+        rgb(fg); doc.text(t, x + pad, y);
         x += tw + gap;
       });
-      y += tagH + 2;
+      y += H6 + 2;
     }
 
     // ══════════════════════════════════════════════════════════
-    // PAGE 1: COVER
+    // PAGE 1 — COVER
     // ══════════════════════════════════════════════════════════
     rgb(DARK, 'fill'); doc.rect(0, 0, W, H, 'F');
-    // Gold border strips
+    // Gold frame
     rgb(GOLD, 'fill');
-    doc.rect(0, 0, W, 3, 'F'); doc.rect(0, H - 3, W, 3, 'F');
-    doc.rect(0, 0, 3, H, 'F'); doc.rect(W - 3, 0, 3, H, 'F');
-    // Title
-    rgb(GOLD); font(36, 'bold'); doc.text('KING', W / 2, 82, { align: 'center' });
-    rgb(WHITE); font(22, 'bold'); doc.text('CV CHECKER', W / 2, 96, { align: 'center' });
-    rgb(GOLD, 'draw'); doc.setLineWidth(0.4); doc.line(M + 25, 103, W - M - 25, 103);
-    rgb([200,180,120]); font(10, 'normal'); doc.text('AI-Powered CV Analysis Report', W / 2, 111, { align: 'center' });
+    doc.rect(0, 0, W, 4, 'F'); doc.rect(0, H - 4, W, 4, 'F');
+    doc.rect(0, 0, 4, H, 'F'); doc.rect(W - 4, 0, 4, H, 'F');
+    // Thin inner frame
+    rgb(DKGOLD, 'draw'); doc.setLineWidth(0.4);
+    doc.rect(8, 8, W - 16, H - 16, 'S');
 
-    // Score boxes
-    const bx1 = W / 2 - 48, bx2 = W / 2 + 8, by = 124, bW = 40, bH = 30;
-    rgb([20,20,36], 'fill'); doc.roundedRect(bx1, by, bW, bH, 3, 3, 'F');
-    rgb(GOLD, 'draw'); doc.setLineWidth(0.5); doc.roundedRect(bx1, by, bW, bH, 3, 3, 'S');
-    rgb(GOLD); font(20, 'bold'); doc.text(`${data.ats_score?.score ?? 0}%`, bx1 + bW / 2, by + 14, { align: 'center' });
-    rgb([160,140,80]); font(7); doc.text('ATS SCORE', bx1 + bW / 2, by + 22, { align: 'center' });
+    rgb(GOLD); font(42, 'bold'); doc.text('KING', W / 2, 88, { align: 'center' });
+    rgb(WHITE); font(24, 'bold'); doc.text('CV CHECKER', W / 2, 102, { align: 'center' });
+    rgb(GOLD, 'draw'); doc.setLineWidth(0.5); doc.line(M + 30, 109, W - M - 30, 109);
+    rgb([190, 170, 110]); font(10); doc.text('AI-Powered CV Analysis Report', W / 2, 117, { align: 'center' });
 
-    rgb([20,20,36], 'fill'); doc.roundedRect(bx2, by, bW, bH, 3, 3, 'F');
-    rgb(BLUE, 'draw'); doc.roundedRect(bx2, by, bW, bH, 3, 3, 'S');
-    rgb(BLUE); font(20, 'bold'); doc.text(`${data.job_match?.overall ?? 0}`, bx2 + bW / 2, by + 14, { align: 'center' });
-    rgb([100,130,200]); font(7); doc.text('JOB MATCH /100', bx2 + bW / 2, by + 22, { align: 'center' });
+    // Score cards
+    const atsS   = data.ats_score?.score ?? 0;
+    const matchS = data.job_match?.overall ?? 0;
+    [[atsS + '%', 'ATS SCORE', GOLD, W / 2 - 50],
+     [matchS + ' / 100', 'JOB MATCH', BLUE, W / 2 + 10]].forEach(([val, lbl, col, bx]) => {
+      rgb([18, 18, 32], 'fill'); doc.roundedRect(bx, 128, 42, 32, 3, 3, 'F');
+      rgb(col, 'draw'); doc.setLineWidth(0.6); doc.roundedRect(bx, 128, 42, 32, 3, 3, 'S');
+      rgb(col); font(18, 'bold'); doc.text(val, bx + 21, 143, { align: 'center' });
+      rgb([160, 145, 90]); font(6.5); doc.text(lbl, bx + 21, 152, { align: 'center' });
+    });
 
-    // Career badge
     if (data.career_level) {
-      rgb([30,30,50], 'fill'); doc.roundedRect(M + 30, 162, CW - 60, 12, 3, 3, 'F');
-      rgb([180,160,100]); font(9, 'bold');
-      doc.text(`${data.career_level} Level  ·  ${data.salary_insights ? '$' + Math.round(data.salary_insights.min_usd / 1000) + 'K–$' + Math.round(data.salary_insights.max_usd / 1000) + 'K est.' : ''}`, W / 2, 170, { align: 'center' });
+      rgb([28, 28, 48], 'fill'); doc.roundedRect(M + 28, 167, CW - 56, 13, 3, 3, 'F');
+      rgb([175, 155, 95]); font(9, 'bold');
+      const salStr = data.salary_insights
+        ? '  |  Est. $' + Math.round(data.salary_insights.min_usd / 1000) + 'K - $' + Math.round(data.salary_insights.max_usd / 1000) + 'K'
+        : '';
+      doc.text(data.career_level + ' Level' + salStr, W / 2, 176, { align: 'center' });
     }
 
-    rgb([80,70,40]); font(8);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`, W / 2, 184, { align: 'center' });
-    rgb(GOLD); font(8); doc.text('Built by Digital Web Hive', W / 2, H - 12, { align: 'center' });
+    rgb([90, 75, 40]); font(8);
+    doc.text('Generated: ' + new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), W / 2, 190, { align: 'center' });
+    rgb(GOLD); font(8); doc.text('Built by Digital Web Hive', W / 2, H - 14, { align: 'center' });
 
     // ══════════════════════════════════════════════════════════
-    // PAGE 2: SCORES + STRENGTHS/GAPS
+    // PAGE 2 — SCORES + STRENGTHS + GAPS
     // ══════════════════════════════════════════════════════════
     newPage();
-    rgb(DARK); font(15, 'bold'); doc.text('Score Breakdown', M, y); y += 3;
-    rgb(GOLD, 'draw'); doc.setLineWidth(0.8); doc.line(M, y, M + 55, y); y += 8;
+    rgb(DARK); font(14, 'bold'); doc.text('Score Breakdown', M, y); y += 2;
+    rgb(GOLD, 'draw'); doc.setLineWidth(0.7); doc.line(M, y, M + 50, y); y += 7;
 
-    const subScores = [
-      ['Skills Match',      data.job_match?.skills,    GREEN],
-      ['Experience Match',  data.job_match?.experience, BLUE],
-      ['Education Fit',     data.job_match?.education,  ORANGE],
-      ['Industry Relevance',data.job_match?.industry,   GOLD],
-    ];
-    subScores.forEach(([lbl, val, col]) => {
-      check(10); val = val || 0;
-      rgb([60,60,80]); font(9); doc.text(lbl, M, y);
-      rgb([230,230,245], 'fill'); doc.roundedRect(M + 52, y - 5, 92, 6.5, 2, 2, 'F');
-      rgb(col, 'fill'); doc.roundedRect(M + 52, y - 5, 92 * (val / 100), 6.5, 2, 2, 'F');
-      rgb(col); font(9, 'bold'); doc.text(`${val}/100`, W - M, y, { align: 'right' });
-      y += 10;
+    [['Skills Match',       data.job_match?.skills,     GREEN],
+     ['Experience Match',   data.job_match?.experience,  BLUE],
+     ['Education Fit',      data.job_match?.education,   ORANGE],
+     ['Industry Relevance', data.job_match?.industry,    GOLD]].forEach(([lbl, val, col]) => {
+      val = val || 0;
+      check(8);
+      rgb(MID); font(8.5); doc.text(lbl, M, y);
+      rgb(BGRAY, 'fill'); doc.roundedRect(M + 50, y - 5, 96, 6, 1.5, 1.5, 'F');
+      rgb(col, 'fill'); doc.roundedRect(M + 50, y - 5, 96 * val / 100, 6, 1.5, 1.5, 'F');
+      rgb(col); font(8.5, 'bold'); doc.text(val + '/100', W - M, y, { align: 'right' });
+      y += 9;
     });
-    y += 4;
 
-    sectionHead('✅', 'Key Strengths', GREEN);
-    (data.strengths || []).forEach(s => bullet(s, 0, [30, 100, 50]));
-    y += 3;
-    sectionHead('⚠️', 'Key Gaps', RED);
-    (data.gaps || []).forEach(g => bullet(g, 0, [160, 40, 40]));
+    y += 2; divider();
+    sectionHead('Key Strengths', GREEN, LTGRN);
+    (data.strengths || []).forEach(s => bullet(s, [20, 110, 50]));
 
-    // ══════════════════════════════════════════════════════════
-    // PAGE 3: KEYWORDS
-    // ══════════════════════════════════════════════════════════
-    newPage();
-    rgb(DARK); font(15, 'bold'); doc.text('Keyword Analysis', M, y); y += 3;
-    rgb(GOLD, 'draw'); doc.line(M, y, M + 55, y); y += 8;
-
-    sectionHead('✗', 'Missing Keywords — Add to Your CV', RED);
-    tagRow(data.keywords?.missing?.slice(0, 21), [255,235,235], [180,40,40]);
-    y += 4;
-    sectionHead('✓', 'Present Keywords — Already in Your CV', GREEN);
-    tagRow(data.keywords?.present?.slice(0, 21), [235,255,240], [30,120,60]);
-    y += 4;
-    sectionHead('★', 'Suggested Additions — Boost ATS Score', GOLD);
-    tagRow(data.keywords?.suggested?.slice(0, 15), [255,252,230], [120,90,10]);
+    y += 2; divider();
+    sectionHead('Key Gaps', RED, LTRED);
+    if (!data.gaps?.length) { rgb(GREEN); font(8.5); txt('No major gaps detected — well aligned with the role.'); y += 7; }
+    else (data.gaps || []).forEach(g => bullet(g, RED));
 
     // ══════════════════════════════════════════════════════════
-    // PAGE 4: BULLET REWRITES
+    // PAGE 3 — KEYWORD ANALYSIS
     // ══════════════════════════════════════════════════════════
     newPage();
-    rgb(DARK); font(15, 'bold'); doc.text('Bullet Point Improvements', M, y); y += 3;
-    rgb(GOLD, 'draw'); doc.line(M, y, M + 70, y); y += 8;
+    rgb(DARK); font(14, 'bold'); doc.text('Keyword Analysis', M, y); y += 2;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 50, y); y += 7;
+
+    sectionHead('Missing Keywords — Add These to Your CV', RED, LTRED);
+    if (!data.keywords?.missing?.length) { rgb(GREEN); font(8.5); txt('All key terms already present!'); y += 7; }
+    else tagRow(data.keywords.missing.slice(0, 24), [255, 228, 228], RED);
+
+    y += 2; divider();
+    sectionHead('Present Keywords — Already in Your CV', GREEN, LTGRN);
+    tagRow(data.keywords?.present?.slice(0, 24), LTGRN, [15, 100, 40]);
+
+    y += 2; divider();
+    sectionHead('Suggested Additions — Boost Your Score', GOLD, [255, 252, 230]);
+    tagRow(data.keywords?.suggested?.slice(0, 18), [255, 250, 220], DKGOLD);
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 4 — BULLET POINT IMPROVEMENTS
+    // ══════════════════════════════════════════════════════════
+    newPage();
+    rgb(DARK); font(14, 'bold'); doc.text('Bullet Point Improvements', M, y); y += 2;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 65, y); y += 2;
+    rgb(MID); font(7.5); doc.text('Weak phrases rewritten with strong action verbs and measurable outcomes.', M, y); y += 7;
 
     (data.bullet_points || []).forEach(bp => {
-      const bfLines = doc.splitTextToSize(bp.original, CW - 26);
-      const afLines = doc.splitTextToSize(bp.improved, CW - 26);
-      check(bfLines.length * 5 + afLines.length * 5 + 20);
+      const bfL = doc.splitTextToSize(clean(bp.original), CW - 22);
+      const afL = doc.splitTextToSize(clean(bp.improved), CW - 22);
+      const bH  = bfL.length * 4.6 + 7;
+      const aH  = afL.length * 4.6 + 7;
+      check(bH + aH + 4);
 
-      rgb([255,244,244], 'fill'); doc.roundedRect(M, y - 4, CW, bfLines.length * 5 + 8, 2, 2, 'F');
-      rgb(RED); font(7, 'bold'); doc.text('BEFORE', M + 2, y);
-      rgb([160,50,50]); font(8.5, 'normal'); doc.text(bfLines, M + 22, y); y += bfLines.length * 5 + 6;
+      // BEFORE block
+      rgb(LTRED, 'fill'); doc.roundedRect(M, y - 3, CW, bH, 1.5, 1.5, 'F');
+      rgb(RED, 'fill'); doc.roundedRect(M, y - 3, 18, bH, 1.5, 1.5, 'F');
+      rgb(WHITE); font(6.5, 'bold'); doc.text('BEFORE', M + 2, y + 1.5);
+      rgb([140, 30, 30]); font(8); doc.text(bfL, M + 21, y); y += bH + 1;
 
-      rgb([242,255,246], 'fill'); doc.roundedRect(M, y - 4, CW, afLines.length * 5 + 8, 2, 2, 'F');
-      rgb(GREEN); font(7, 'bold'); doc.text('AFTER', M + 2, y);
-      rgb([30,100,50]); font(8.5, 'normal'); doc.text(afLines, M + 22, y); y += afLines.length * 5 + 10;
+      // AFTER block
+      rgb(LTGRN, 'fill'); doc.roundedRect(M, y - 3, CW, aH, 1.5, 1.5, 'F');
+      rgb(GREEN, 'fill'); doc.roundedRect(M, y - 3, 18, aH, 1.5, 1.5, 'F');
+      rgb(WHITE); font(6.5, 'bold'); doc.text('AFTER', M + 2.5, y + 1.5);
+      rgb([15, 85, 35]); font(8); doc.text(afL, M + 21, y); y += aH + 4;
     });
 
     // ══════════════════════════════════════════════════════════
-    // PAGE 5: RED FLAGS + CV FEEDBACK
+    // PAGE 5 — RED FLAGS + CV FEEDBACK + PROFESSIONAL SUMMARY
     // ══════════════════════════════════════════════════════════
     newPage();
-    rgb(DARK); font(15, 'bold'); doc.text('Red Flags & CV Feedback', M, y); y += 3;
-    rgb(GOLD, 'draw'); doc.line(M, y, M + 65, y); y += 8;
+    rgb(DARK); font(14, 'bold'); doc.text('CV Audit & Professional Summary', M, y); y += 2;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 70, y); y += 7;
 
-    sectionHead('🚨', 'Red Flags', RED);
+    sectionHead('Red Flags', RED, LTRED);
     if (!data.red_flags?.length) {
-      rgb(GREEN); font(9); doc.text('No red flags detected. Your CV looks clean!', M + 4, y); y += 8;
+      rgb(GREEN); font(8.5); txt('No red flags detected — your CV looks clean.'); y += 7;
     } else {
       (data.red_flags || []).forEach(f => {
-        check(14);
+        check(12);
         const sCol = f.severity === 'HIGH' ? RED : f.severity === 'MEDIUM' ? ORANGE : GOLD;
-        const desc  = doc.splitTextToSize(f.description, CW - 22);
-        rgb(sCol.map(c => Math.min(255, c + 190)), 'fill');
-        doc.roundedRect(M, y - 4, CW, desc.length * 4.5 + 8, 2, 2, 'F');
-        rgb(sCol); font(7, 'bold'); doc.text(f.severity, M + 2, y);
-        rgb([60,60,80]); font(8, 'normal'); doc.text(desc, M + 18, y);
-        y += desc.length * 4.5 + 9;
+        const lt   = f.severity === 'HIGH' ? LTRED : f.severity === 'MEDIUM' ? LTOR : [255,252,230];
+        const dL   = doc.splitTextToSize(clean(f.description), CW - 22);
+        rgb(lt, 'fill'); doc.roundedRect(M, y - 3, CW, dL.length * 4.5 + 7, 1.5, 1.5, 'F');
+        rgb(sCol, 'fill'); doc.roundedRect(M, y - 3, 20, dL.length * 4.5 + 7, 1.5, 1.5, 'F');
+        rgb(WHITE); font(6, 'bold'); doc.text(clean(f.severity), M + 2, y + 1);
+        rgb([50, 50, 70]); font(8); doc.text(dL, M + 23, y);
+        y += dL.length * 4.5 + 8;
       });
     }
 
-    y += 3;
-    sectionHead('📄', 'CV Feedback', BLUE);
-    (data.cv_feedback || []).forEach(f => bullet((f.positive ? '✅ ' : '⚡ ') + f.text, 0, f.positive ? [30,100,50] : [80,80,120]));
+    y += 1; divider();
+    sectionHead('CV Feedback', BLUE, LTBLU);
+    (data.cv_feedback || []).forEach(f => {
+      const isPos = f.positive;
+      bullet((isPos ? '[+] ' : '[!] ') + clean(f.text), isPos ? GREEN : [80, 80, 130]);
+    });
+
+    y += 1; divider();
+    sectionHead('AI-Generated Professional Summary', GOLD, [255, 252, 230]);
+    const sumL = doc.splitTextToSize(clean(data.professional_summary || ''), CW - 8);
+    check(sumL.length * 5 + 14);
+    rgb([255, 252, 230], 'fill'); rgb(GOLD, 'draw'); doc.setLineWidth(0.3);
+    doc.roundedRect(M, y - 2, CW, sumL.length * 5.2 + 8, 2, 2, 'FD');
+    rgb(DKGOLD); font(8.5, 'italic'); doc.text(sumL, M + 4, y + 4);
+    y += sumL.length * 5.2 + 12;
 
     // ══════════════════════════════════════════════════════════
-    // PAGE 6: PROFESSIONAL SUMMARY + SKILLS GAP
+    // PAGE 6 — SKILLS PLAN + INTERVIEW INSIGHTS
     // ══════════════════════════════════════════════════════════
     newPage();
-    rgb(DARK); font(15, 'bold'); doc.text('Professional Summary & Skills Plan', M, y); y += 3;
-    rgb(GOLD, 'draw'); doc.line(M, y, M + 80, y); y += 8;
+    rgb(DARK); font(14, 'bold'); doc.text('Skills Plan & Interview Insights', M, y); y += 2;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 72, y); y += 7;
 
-    sectionHead('🧠', 'AI-Generated Professional Summary', GOLD);
-    const sumLines = doc.splitTextToSize(data.professional_summary || '', CW - 8);
-    rgb([255,252,230], 'fill'); rgb(GOLD, 'draw'); doc.setLineWidth(0.3);
-    doc.roundedRect(M, y - 2, CW, sumLines.length * 5.2 + 8, 3, 3, 'FD');
-    rgb([80,65,15]); font(9, 'italic'); doc.text(sumLines, M + 4, y + 4);
-    y += sumLines.length * 5.2 + 14;
+    const skills = data.skills_gap || [];
+    if (skills.length) {
+      sectionHead('Skills Improvement Plan', BLUE, LTBLU);
+      skills.forEach(sk => {
+        check(16);
+        const pCol = sk.priority === 'HIGH' ? RED : sk.priority === 'MEDIUM' ? ORANGE : BLUE;
+        const lt   = sk.priority === 'HIGH' ? LTRED : sk.priority === 'MEDIUM' ? LTOR : LTBLU;
+        const dL   = doc.splitTextToSize(clean(sk.description), CW - 24);
+        const resL = doc.splitTextToSize('Resource: ' + clean(sk.resource), CW - 24);
+        const bH   = dL.length * 4.5 + resL.length * 4 + 14;
+        check(bH);
+        rgb(lt, 'fill'); doc.roundedRect(M, y - 3, CW, bH, 1.5, 1.5, 'F');
+        rgb(pCol, 'fill'); doc.roundedRect(M, y - 3, 20, bH, 1.5, 1.5, 'F');
+        rgb(WHITE); font(6, 'bold'); doc.text(clean(sk.priority), M + 1.5, y + 1);
+        rgb(DARK); font(9, 'bold'); doc.text(clean(sk.skill), M + 23, y);
+        rgb(MID); font(7.5); doc.text(dL, M + 23, y + 5.5);
+        rgb(DKGOLD); font(7, 'italic'); doc.text(resL, M + 23, y + 5.5 + dL.length * 4.5);
+        y += bH + 3;
+      });
+      y += 1; divider();
+    }
 
-    sectionHead('📚', 'Skills Improvement Plan', BLUE);
-    (data.skills_gap || []).forEach(skill => {
-      check(20);
-      const pCol = skill.priority === 'HIGH' ? RED : skill.priority === 'MEDIUM' ? ORANGE : BLUE;
-      const descL = doc.splitTextToSize(skill.description, CW - 26);
-      rgb(pCol.map(c => Math.min(255, c + 185)), 'fill');
-      doc.roundedRect(M, y - 4, CW, descL.length * 4.5 + 16, 2, 2, 'F');
-      rgb(pCol); font(7, 'bold'); doc.text(skill.priority, M + 2, y);
-      rgb(DARK); font(9.5, 'bold'); doc.text(skill.skill, M + 20, y);
-      rgb([70,70,100]); font(7.5, 'normal'); doc.text(descL, M + 20, y + 5);
-      rgb(GOLD); font(7, 'italic'); doc.text('📚 ' + skill.resource, M + 20, y + descL.length * 4.5 + 6);
-      y += descL.length * 4.5 + 18;
+    sectionHead('Interview Insights', BLUE, LTBLU);
+    const ins  = data.interview_insights;
+    const prob = ins?.shortlist_probability ?? 0;
+    const pC   = prob >= 70 ? GREEN : prob >= 40 ? ORANGE : RED;
+    check(22);
+    rgb(LGRAY, 'fill'); doc.roundedRect(M, y, CW, 20, 2, 2, 'F');
+    rgb(DARK); font(9, 'bold'); doc.text('Shortlisting Probability', M + 4, y + 8);
+    rgb(pC); font(18, 'bold'); doc.text(prob + '%', W - M - 2, y + 10, { align: 'right' });
+    const insL = doc.splitTextToSize(clean(ins?.summary || ''), CW - 12);
+    rgb(MID); font(7); doc.text(insL, M + 4, y + 15); y += 26;
+
+    sectionHead('Predicted Interview Questions', BLUE, LTBLU);
+    (ins?.questions || []).forEach((q, i) => {
+      check(12);
+      const qL = doc.splitTextToSize(clean(q), CW - 16);
+      rgb(LTBLU, 'fill'); doc.roundedRect(M, y - 3, CW, qL.length * 4.5 + 7, 1.5, 1.5, 'F');
+      rgb(BLUE); font(8, 'bold'); doc.text('Q' + (i + 1) + '.', M + 2, y);
+      rgb([40, 55, 100]); font(8); doc.text(qL, M + 13, y);
+      y += qL.length * 4.5 + 8;
     });
 
     // ══════════════════════════════════════════════════════════
-    // PAGE 7: INTERVIEW INSIGHTS + ATS TIPS
+    // PAGE 7 — ATS TIPS + LINKEDIN + CHECKLIST
     // ══════════════════════════════════════════════════════════
     newPage();
-    rgb(DARK); font(15, 'bold'); doc.text('Interview Insights & ATS Action Plan', M, y); y += 3;
-    rgb(GOLD, 'draw'); doc.line(M, y, M + 80, y); y += 8;
+    rgb(DARK); font(14, 'bold'); doc.text('ATS Tips, LinkedIn & Tailoring Checklist', M, y); y += 2;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 80, y); y += 7;
 
-    const insights = data.interview_insights;
-    const prob     = insights?.shortlist_probability ?? 0;
-    const pCol     = prob >= 70 ? GREEN : prob >= 40 ? GOLD : RED;
-
-    rgb(LGRAY, 'fill'); doc.roundedRect(M, y, CW, 26, 3, 3, 'F');
-    rgb(DARK); font(10, 'bold'); doc.text('Shortlisting Probability', M + 4, y + 9);
-    rgb(pCol); font(22, 'bold'); doc.text(`${prob}%`, W - M - 2, y + 11, { align: 'right' });
-    const sumL = doc.splitTextToSize(insights?.summary || '', CW - 10);
-    rgb([80,80,110]); font(7.5, 'normal'); doc.text(sumL, M + 4, y + 17);
-    y += 32;
-
-    sectionHead('🎤', 'Predicted Interview Questions', BLUE);
-    (insights?.questions || []).forEach((q, i) => {
+    sectionHead('Top ATS Boost Tips', GOLD, [255, 252, 230]);
+    (data.ats_boost_tips || []).slice(0, 6).forEach(tip => {
       check(14);
-      const qL = doc.splitTextToSize(q, CW - 18);
-      rgb([240,245,255], 'fill'); doc.roundedRect(M, y - 4, CW, qL.length * 4.5 + 8, 2, 2, 'F');
-      rgb(BLUE); font(8, 'bold'); doc.text(`Q${i+1}.`, M + 2, y);
-      rgb([50,60,100]); font(8, 'normal'); doc.text(qL, M + 13, y);
-      y += qL.length * 4.5 + 10;
-    });
-
-    y += 3;
-    sectionHead('💡', 'Top ATS Boost Tips', GOLD);
-    (data.ats_boost_tips || []).slice(0, 5).forEach(tip => {
-      check(16);
-      const detL = doc.splitTextToSize(`${tip.title}: ${tip.detail}`, CW - 26);
-      rgb([255,252,230], 'fill'); doc.roundedRect(M, y - 4, CW, detL.length * 4.5 + 8, 2, 2, 'F');
+      const tL = doc.splitTextToSize(clean(tip.title) + ': ' + clean(tip.detail), CW - 24);
       const pC = tip.priority === 'HIGH' ? RED : tip.priority === 'MEDIUM' ? ORANGE : BLUE;
-      rgb(pC); font(7, 'bold'); doc.text(tip.priority, M + 2, y);
-      rgb([80,70,20]); font(8, 'normal'); doc.text(detL, M + 20, y);
-      y += detL.length * 4.5 + 10;
+      const lt = tip.priority === 'HIGH' ? LTRED : tip.priority === 'MEDIUM' ? LTOR : LTBLU;
+      rgb(lt, 'fill'); doc.roundedRect(M, y - 3, CW, tL.length * 4.5 + 7, 1.5, 1.5, 'F');
+      rgb(pC, 'fill'); doc.roundedRect(M, y - 3, 20, tL.length * 4.5 + 7, 1.5, 1.5, 'F');
+      rgb(WHITE); font(6, 'bold'); doc.text(clean(tip.priority), M + 1.5, y + 1);
+      rgb([60, 55, 15]); font(8); doc.text(tL, M + 23, y);
+      y += tL.length * 4.5 + 8;
     });
 
-    // ══════════════════════════════════════════════════════════
-    // PAGE 8: LINKEDIN + TAILORING CHECKLIST
-    // ══════════════════════════════════════════════════════════
-    newPage();
-    rgb(DARK); font(15, 'bold'); doc.text('LinkedIn & Tailoring Checklist', M, y); y += 3;
-    rgb(GOLD, 'draw'); doc.line(M, y, M + 72, y); y += 8;
-
-    sectionHead('🔗', 'LinkedIn Headline', [0, 119, 181]);
+    y += 1; divider();
+    sectionHead('LinkedIn Headline Generator', BLUE, LTBLU);
     const li = data.linkedin_headline;
     if (li) {
-      [['Primary', li.primary], ['Alternative', li.alternative]].forEach(([lbl, text]) => {
-        check(20);
-        rgb([8,24,40], 'fill'); doc.roundedRect(M, y - 2, CW, 16, 3, 3, 'F');
-        rgb([74,158,255]); font(7, 'bold'); doc.text(lbl, M + 3, y + 3);
-        rgb([220,235,255]); font(8.5, 'bold');
-        const hLines = doc.splitTextToSize(text, CW - 8);
-        doc.text(hLines, M + 3, y + 9); y += hLines.length * 4.5 + 16;
+      [['Primary Headline', li.primary], ['Alternative Headline', li.alternative]].forEach(([lbl, txt2]) => {
+        check(18);
+        const hL = doc.splitTextToSize(clean(txt2), CW - 8);
+        rgb([10, 22, 42], 'fill'); doc.roundedRect(M, y - 3, CW, hL.length * 5 + 13, 2, 2, 'F');
+        rgb([74, 158, 255]); font(7, 'bold'); doc.text(lbl, M + 3, y + 2);
+        rgb([215, 230, 255]); font(9, 'bold'); doc.text(hL, M + 3, y + 8); y += hL.length * 5 + 14;
       });
-      const tipL = doc.splitTextToSize(li.tip, CW - 8);
-      rgb(LGRAY, 'fill'); doc.roundedRect(M, y - 2, CW, tipL.length * 4.5 + 8, 2, 2, 'F');
-      rgb([60,60,100]); font(7.5, 'normal'); doc.text(tipL, M + 3, y + 3); y += tipL.length * 4.5 + 12;
+      const tipL = doc.splitTextToSize(clean(li.tip), CW - 6);
+      rgb(LGRAY, 'fill'); doc.roundedRect(M, y - 2, CW, tipL.length * 4.5 + 7, 2, 2, 'F');
+      rgb(MID); font(7.5); doc.text(tipL, M + 3, y + 3); y += tipL.length * 4.5 + 10;
     }
 
-    y += 3;
-    sectionHead('✅', 'CV Tailoring Checklist', GREEN);
+    y += 1; divider();
+    sectionHead('CV Tailoring Checklist', GREEN, LTGRN);
     (data.tailoring_checklist || []).forEach(item => {
-      check(14);
-      const detL = doc.splitTextToSize(item.detail, CW - 26);
-      const pC   = item.priority === 'HIGH' ? RED : item.priority === 'MEDIUM' ? ORANGE : BLUE;
-      rgb(pC.map(c => Math.min(255, c + 185)), 'fill');
-      doc.roundedRect(M, y - 4, CW, detL.length * 4.5 + 9, 2, 2, 'F');
-      rgb(pC); font(7, 'bold'); doc.text(item.priority, M + 2, y);
-      rgb(DARK); font(8.5, 'bold'); doc.text(item.task, M + 18, y);
-      rgb([70,70,100]); font(7.5, 'normal'); doc.text(detL, M + 18, y + 5);
-      y += detL.length * 4.5 + 11;
+      check(13);
+      const dL = doc.splitTextToSize(clean(item.detail), CW - 24);
+      const pC = item.priority === 'HIGH' ? RED : item.priority === 'MEDIUM' ? ORANGE : BLUE;
+      const lt = item.priority === 'HIGH' ? LTRED : item.priority === 'MEDIUM' ? LTOR : LTBLU;
+      rgb(lt, 'fill'); doc.roundedRect(M, y - 3, CW, dL.length * 4.5 + 12, 1.5, 1.5, 'F');
+      rgb(pC, 'fill'); doc.roundedRect(M, y - 3, 20, dL.length * 4.5 + 12, 1.5, 1.5, 'F');
+      rgb(WHITE); font(6, 'bold'); doc.text(clean(item.priority), M + 1.5, y + 1);
+      rgb(DARK); font(8.5, 'bold'); doc.text(clean(item.task), M + 23, y);
+      rgb(MID); font(7.5); doc.text(dL, M + 23, y + 5.5);
+      y += dL.length * 4.5 + 13;
     });
 
     // ══════════════════════════════════════════════════════════
-    // PAGE 9: SCORE BOOST ACTION PLAN (only when ATS < 70)
+    // PAGE 8 (conditional) — SCORE BOOST ACTION PLAN
     // ══════════════════════════════════════════════════════════
     const provisions = data.score_provisions || [];
-    if (provisions.length && (data.ats_score?.score ?? 100) < 70) {
+    if (provisions.length && atsS < 70) {
       newPage();
-      const atsS = data.ats_score?.score ?? 0;
-      rgb(DARK); font(15, 'bold'); doc.text('Score Boost Action Plan', M, y); y += 3;
-      rgb(RED, 'draw'); doc.setLineWidth(0.8); doc.line(M, y, M + 72, y); y += 5;
-
-      // Intro blurb
+      rgb(DARK); font(14, 'bold'); doc.text('Score Boost Action Plan', M, y); y += 2;
+      rgb(RED, 'draw'); doc.setLineWidth(0.7); doc.line(M, y, M + 65, y); y += 3;
       const introL = doc.splitTextToSize(
-        `Your ATS score is ${atsS}% — ${70 - atsS} points below the 70% recruiter threshold. Work through the actions below to close the gap.`,
+        'Your ATS score is ' + atsS + '% - ' + (70 - atsS) + ' points below the 70% recruiter threshold. Complete these actions in order to close the gap.',
         CW
       );
-      rgb([100,100,130]); font(8.5, 'normal'); doc.text(introL, M, y);
-      y += introL.length * 4.8 + 6;
+      rgb(MID); font(8); doc.text(introL, M, y); y += introL.length * 4.5 + 5;
 
       provisions.forEach(p => {
-        const actionL  = doc.splitTextToSize(p.action, CW - 50);
-        const exampleL = doc.splitTextToSize('Ex: ' + p.example, CW - 50);
-        const blockH   = actionL.length * 4.5 + exampleL.length * 4 + 20;
-        check(blockH);
+        const actL = doc.splitTextToSize(clean(p.action), CW - 46);
+        const exL  = doc.splitTextToSize('e.g. ' + clean(p.example), CW - 46);
+        const bH   = actL.length * 4.5 + exL.length * 4 + 18;
+        check(bH + 2);
 
-        // Row background
-        rgb(RED.map(c => Math.min(255, c + 190)), 'fill');
-        doc.roundedRect(M, y - 4, CW, blockH, 2, 2, 'F');
+        rgb(LTRED, 'fill'); doc.roundedRect(M, y - 3, CW, bH, 2, 2, 'F');
 
         // Number badge
-        rgb(RED, 'fill'); doc.roundedRect(M + 1, y - 3, 10, 10, 2, 2, 'F');
-        rgb(WHITE); font(7, 'bold'); doc.text(String(p.number), M + 6, y + 4, { align: 'center' });
+        rgb(RED, 'fill'); doc.circle(M + 6, y + 3.5, 5, 'F');
+        rgb(WHITE); font(7.5, 'bold'); doc.text(String(p.number), M + 6, y + 5.5, { align: 'center' });
 
-        // Effort tag
-        rgb(GOLD); font(6.5, 'bold'); doc.text(p.effort, M + 14, y);
+        // Content
+        const cx = M + 14;
+        rgb(RED); font(6.5, 'bold'); doc.text(clean(p.effort), cx, y);
+        rgb(DARK); font(9, 'bold'); doc.text(clean(p.title), cx, y + 5.5);
+        rgb(MID); font(7.5); doc.text(actL, cx, y + 11);
+        rgb(DKGOLD); font(7, 'italic'); doc.text(exL, cx, y + 11 + actL.length * 4.5);
 
-        // Title
-        rgb(DARK); font(9, 'bold'); doc.text(p.title, M + 14, y + 5.5);
+        // Impact pill
+        const impT = clean(p.impact);
+        font(6.5, 'bold');
+        const impW = doc.getTextWidth(impT) + 5;
+        const ipX  = W - M - impW - 1;
+        rgb(LTGRN, 'fill'); doc.roundedRect(ipX, y - 2, impW + 2, 8, 2, 2, 'F');
+        rgb(GREEN, 'draw'); doc.setLineWidth(0.3); doc.roundedRect(ipX, y - 2, impW + 2, 8, 2, 2, 'S');
+        rgb(GREEN); doc.text(impT, ipX + 3.5, y + 3.5);
 
-        // Action
-        rgb([60,60,90]); font(7.5, 'normal'); doc.text(actionL, M + 14, y + 11);
-
-        // Example
-        const exY = y + 11 + actionL.length * 4.5;
-        rgb([120,100,50]); font(7, 'italic'); doc.text(exampleL, M + 14, exY);
-
-        // Impact badge (right side)
-        const impactText = p.impact;
-        font(7, 'bold');
-        const impW = doc.getTextWidth(impactText) + 6;
-        rgb([34,197,94].map(c => Math.min(255, c + 180)), 'fill');
-        doc.roundedRect(W - M - impW - 1, y - 3, impW + 2, 9, 2, 2, 'F');
-        rgb([20,100,40]); doc.text(impactText, W - M - impW / 2, y + 3, { align: 'center' });
-
-        y += blockH + 3;
+        y += bH + 3;
       });
     }
 
     // ── Save ──
-    doc.save(`King-CV-Report-${Date.now()}.pdf`);
+    doc.save('King-CV-Report-' + Date.now() + '.pdf');
 
   } finally {
-    if (btn) { btn.innerHTML = '<span>⬇️</span> Download Report'; btn.disabled = false; }
+    if (btn) { btn.innerHTML = '<span>&#8595;</span> Download Report'; btn.disabled = false; }
   }
 }

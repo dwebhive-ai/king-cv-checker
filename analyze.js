@@ -166,6 +166,17 @@ function getStopWords() {
     'while','one','two','three','four','five','six','seven','eight','nine',
     'ten','new','old','good','great','best','well','work','years','year',
     'make','made','making','use','using','used','across','within',
+    // Generic JD filler words that are not meaningful keywords
+    'role','roles','plus','must','meet','pass','learn','key','tasks','test',
+    'clear','verbal','written','ability','skills','checks','check','degree',
+    'police','drug','screening','background','able','level','high','strong',
+    'suite','office','handle','successful','information','communication',
+    'include','includes','including','required','requirements','preferred',
+    'responsibilities','qualifications','experience','position','candidate',
+    'apply','application','team','company','organization','please','send',
+    'email','following','ensure','provide','support','help','assist','per',
+    'review','report','reports','reporting','day','days','time','times',
+    'full','part','based','related','relevant','equivalent','demonstrated',
   ]);
 }
 
@@ -430,7 +441,8 @@ function improveBulletPoints(cvText) {
     const verb    = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
     const coreIdx = lineLower.indexOf(weak);
     let core      = line.slice(coreIdx + weak.length).replace(/^[,;: ]+/, '');
-    core          = core.charAt(0).toUpperCase() + core.slice(1);
+    // Lowercase the whole core first so prepended verb is the only capitalised word
+    core = core.charAt(0).toLowerCase() + core.slice(1);
 
     if (!/\d+[%x]?|\$[\d,]+/i.test(core)) {
       core = core.replace(/\.$/, '') + suffixes[Math.floor(Math.random() * suffixes.length)];
@@ -440,25 +452,37 @@ function improveBulletPoints(cvText) {
     if (improvements.length >= 6) break;
   }
 
-  if (!improvements.length) {
-    return [
-      {
-        original: 'Responsible for managing the project team and deliverables.',
-        improved: 'Led a cross-functional team of 8 to deliver project milestones 15% ahead of schedule.',
-      },
-      {
-        original: 'Helped with the development of the company website.',
-        improved: 'Engineered core website features that improved user engagement by 40% within 3 months.',
-      },
-      {
-        original: 'Worked on improving customer satisfaction scores.',
-        improved: 'Drove customer satisfaction from 72% to 91% by implementing a structured feedback and resolution process.',
-      },
-      {
-        original: 'Assisted in the data analysis and reporting process.',
-        improved: 'Automated weekly data analysis pipeline, reducing reporting time from 8 hours to 45 minutes.',
-      },
-    ];
+  // Always pad to at least 5 pairs so the PDF section is meaningful
+  const genericFallbacks = [
+    {
+      original: 'Responsible for managing the project team and deliverables.',
+      improved: 'Led a cross-functional team of 8 to deliver project milestones 15% ahead of schedule.',
+    },
+    {
+      original: 'Helped with the development of the company website.',
+      improved: 'Engineered core website features that improved user engagement by 40% within 3 months.',
+    },
+    {
+      original: 'Worked on improving customer satisfaction scores.',
+      improved: 'Drove customer satisfaction from 72% to 91% by implementing a structured feedback and resolution process.',
+    },
+    {
+      original: 'Assisted in the data analysis and reporting process.',
+      improved: 'Automated weekly data analysis pipeline, reducing reporting time from 8 hours to 45 minutes.',
+    },
+    {
+      original: 'Participated in team meetings and project planning sessions.',
+      improved: 'Spearheaded weekly cross-team syncs, cutting miscommunication incidents by 35% and improving sprint velocity by 20%.',
+    },
+    {
+      original: 'Duties included preparing reports and presentations for stakeholders.',
+      improved: 'Delivered executive-level dashboards to 12+ stakeholders, enabling data-driven decisions that reduced operational costs by 18%.',
+    },
+  ];
+
+  let fi = 0;
+  while (improvements.length < 5 && fi < genericFallbacks.length) {
+    improvements.push(genericFallbacks[fi++]);
   }
 
   return improvements;
@@ -1232,7 +1256,7 @@ function rewriteSingleBullet(line) {
   const trigger  = triggers.find(t => line.toLowerCase().includes(t)) || 'responsible for';
   const idx      = line.toLowerCase().indexOf(trigger);
   let core       = line.slice(idx + trigger.length).replace(/^[,;: ]+/, '').trim();
-  core           = core.charAt(0).toUpperCase() + core.slice(1).replace(/\.$/, '');
+  core           = core.charAt(0).toLowerCase() + core.slice(1).replace(/\.$/, '');
   if (!/\d+[%x]?|\$[\d,]+/i.test(core)) {
     core += suffixes[Math.floor(Math.random() * suffixes.length)];
   }
