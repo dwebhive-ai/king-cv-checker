@@ -584,8 +584,16 @@ function renderResults(data) {
   renderProfessionalSummary(data.professional_summary);
   renderInterviewInsights(data.interview_insights);
 
+  // Render new premium sections
+  renderCrownBadge(data.ats_score?.score ?? 0);
+  renderATSBoostTips(data.ats_boost_tips);
+  renderPowerScore(data.power_score);
+  renderCareerLevel(data.career_level, data.salary_insights);
+  renderLinkedInHeadline(data.linkedin_headline);
+  renderTailoringChecklist(data.tailoring_checklist);
+
   // Wire up quick action buttons
-  document.getElementById('downloadReportBtn')?.addEventListener('click', () => downloadReport(data));
+  document.getElementById('downloadReportBtn')?.addEventListener('click', () => generatePDFReport(data));
   document.getElementById('copyReportBtn')?.addEventListener('click', () => copyFullReport(data));
 
   // Floating badge
@@ -956,4 +964,517 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/* ============================================================
+   PREMIUM RENDER FUNCTIONS
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   CROWN BADGE
+   ------------------------------------------------------------ */
+function renderCrownBadge(atsScore) {
+  const row = document.getElementById('crownBadgeRow');
+  if (!row) return;
+
+  let cls, label, icon;
+  if (atsScore >= 80)      { cls = 'badge-platinum'; label = 'Platinum Crown'; icon = '👑'; }
+  else if (atsScore >= 60) { cls = 'badge-gold';     label = 'Gold Crown';     icon = '👑'; }
+  else if (atsScore >= 40) { cls = 'badge-silver';   label = 'Silver Crown';   icon = '🥈'; }
+  else                     { cls = 'badge-bronze';   label = 'Bronze Crown';   icon = '🥉'; }
+
+  row.innerHTML = `
+    <div class="crown-badge ${cls}">
+      <span>${icon}</span>
+      <span>${label}</span>
+      <span style="font-weight:400;opacity:0.7">— ATS Score: ${atsScore}%</span>
+    </div>`;
+}
+
+/* ------------------------------------------------------------
+   ATS BOOST TIPS
+   ------------------------------------------------------------ */
+function renderATSBoostTips(tips) {
+  const el = document.getElementById('atsTipsContent');
+  if (!tips || !tips.length) {
+    el.innerHTML = '<p style="color:var(--green)">Your CV is already well-optimised for ATS. Keep maintaining keyword alignment with each job application.</p>';
+    return;
+  }
+
+  const priorityColor = { HIGH: 'priority-high', MEDIUM: 'priority-medium', LOW: 'priority-low' };
+
+  el.innerHTML = tips.map(tip => `
+    <div class="ats-tip-item">
+      <span class="ats-tip-icon">${escHtml(tip.icon)}</span>
+      <div class="ats-tip-body">
+        <div class="ats-tip-title">
+          <span class="skill-priority ${priorityColor[tip.priority] || 'priority-low'}">${escHtml(tip.priority)}</span>
+          &nbsp;${escHtml(tip.title)}
+        </div>
+        <div class="ats-tip-detail">${escHtml(tip.detail)}</div>
+      </div>
+      <span class="ats-tip-impact">${escHtml(tip.impact)}</span>
+    </div>
+  `).join('');
+}
+
+/* ------------------------------------------------------------
+   POWER SCORE
+   ------------------------------------------------------------ */
+function renderPowerScore(power) {
+  const el = document.getElementById('powerContent');
+  if (!power) { el.innerHTML = '<p>Could not calculate power score.</p>'; return; }
+
+  const levelColors = { Elite: '#ffd700', Strong: '#22c55e', Average: '#f97316', Weak: '#ef4444' };
+  const color = levelColors[power.level] || '#888';
+
+  el.innerHTML = `
+    <div class="power-score-display">
+      <div class="power-score-num">${power.score}</div>
+      <div class="power-level-badge" style="background:${color}22;color:${color};border:1px solid ${color}55">
+        ${escHtml(power.level)} Power
+      </div>
+    </div>
+    <div class="power-stats">
+      <div class="power-stat">
+        <span class="power-stat-num">${power.power_verbs_found.length}</span>
+        <span class="power-stat-label">Power Verbs Found</span>
+      </div>
+      <div class="power-stat">
+        <span class="power-stat-num">${power.metrics_count}</span>
+        <span class="power-stat-label">Metrics Used</span>
+      </div>
+      <div class="power-stat" style="grid-column:1/-1">
+        <span class="power-stat-num" style="color:var(--red)">${power.cliches_found.length}</span>
+        <span class="power-stat-label">Clichés Detected</span>
+      </div>
+    </div>
+    ${power.power_verbs_found.length ? `
+      <div class="power-verb-row" style="margin-top:var(--space-md)">
+        <div class="power-verb-row-title">✅ Power verbs found</div>
+        <div class="keyword-tags">${power.power_verbs_found.map(v => `<span class="kw-tag present">${escHtml(v)}</span>`).join('')}</div>
+      </div>` : ''}
+    ${power.power_verbs_missing.length ? `
+      <div class="power-verb-row" style="margin-top:var(--space-sm)">
+        <div class="power-verb-row-title">💡 Add these power verbs</div>
+        <div class="keyword-tags">${power.power_verbs_missing.map(v => `<span class="kw-tag suggested">${escHtml(v)}</span>`).join('')}</div>
+      </div>` : ''}
+    ${power.cliches_found.length ? `
+      <div class="power-verb-row" style="margin-top:var(--space-sm)">
+        <div class="power-verb-row-title">🚫 Remove these clichés</div>
+        <div class="keyword-tags">${power.cliches_found.map(c => `<span class="kw-tag missing">${escHtml(c)}</span>`).join('')}</div>
+      </div>` : ''}
+  `;
+}
+
+/* ------------------------------------------------------------
+   CAREER LEVEL + SALARY INSIGHTS
+   ------------------------------------------------------------ */
+function renderCareerLevel(level, salary) {
+  const el = document.getElementById('careerContent');
+  if (!level || !salary) { el.innerHTML = '<p>Could not detect career level.</p>'; return; }
+
+  const levelIcons = { Executive: '🏛️', Director: '🎖️', Lead: '🌟', Senior: '💼', 'Mid-Level': '🚀', Junior: '🌱' };
+  const icon = levelIcons[level] || '💼';
+
+  const formatSalary = n => '$' + Math.round(n / 1000) + 'K';
+
+  el.innerHTML = `
+    <div class="career-level-display">
+      <span class="career-level-icon">${icon}</span>
+      <div>
+        <div class="career-level-label">${escHtml(level)}</div>
+        <div class="career-level-sub">Detected career level</div>
+      </div>
+    </div>
+    <div class="salary-range">
+      <div class="salary-figures">${formatSalary(salary.min_usd)} – ${formatSalary(salary.max_usd)}</div>
+      <div class="salary-period">Estimated Annual Salary (USD)</div>
+    </div>
+    <div class="salary-tip">💡 ${escHtml(salary.negotiation_tip)}</div>
+    <p style="font-size:0.72rem;color:var(--text-muted);margin-top:var(--space-sm)">${escHtml(salary.note)}</p>
+  `;
+}
+
+/* ------------------------------------------------------------
+   LINKEDIN HEADLINE
+   ------------------------------------------------------------ */
+function renderLinkedInHeadline(linkedin) {
+  const el = document.getElementById('linkedinContent');
+  if (!linkedin) { el.innerHTML = '<p>Could not generate headline.</p>'; return; }
+
+  el.innerHTML = `
+    <div class="linkedin-headline-box">
+      <div class="linkedin-headline-label">🏆 Primary Headline (Recommended)</div>
+      <div class="linkedin-headline-text" id="linkedinPrimary">${escHtml(linkedin.primary)}</div>
+      <button class="linkedin-copy-btn" data-copy="primary">Copy Headline</button>
+    </div>
+    <div class="linkedin-headline-box" style="margin-bottom:var(--space-md)">
+      <div class="linkedin-headline-label">✦ Alternative Option</div>
+      <div class="linkedin-headline-text" id="linkedinAlt">${escHtml(linkedin.alternative)}</div>
+      <button class="linkedin-copy-btn" data-copy="alt">Copy Headline</button>
+    </div>
+    <div class="linkedin-tip">💡 ${escHtml(linkedin.tip)}</div>
+  `;
+
+  el.querySelectorAll('.linkedin-copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const text = btn.dataset.copy === 'primary' ? linkedin.primary : linkedin.alternative;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Headline'; }, 2000);
+      });
+    });
+  });
+}
+
+/* ------------------------------------------------------------
+   TAILORING CHECKLIST
+   ------------------------------------------------------------ */
+function renderTailoringChecklist(items) {
+  const el = document.getElementById('checklistContent');
+  if (!items || !items.length) { el.innerHTML = '<p>Checklist unavailable.</p>'; return; }
+
+  const priorityClass = { HIGH: 'priority-high', MEDIUM: 'priority-medium', LOW: 'priority-low' };
+
+  el.innerHTML = `<div class="checklist-grid">${
+    items.map(item => `
+      <div class="checklist-item">
+        <span class="checklist-icon">${escHtml(item.icon)}</span>
+        <div class="checklist-body">
+          <div class="checklist-task">
+            <span class="checklist-priority ${priorityClass[item.priority] || 'priority-low'}">${escHtml(item.priority)}</span>
+            &nbsp;${escHtml(item.task)}
+          </div>
+          <div class="checklist-detail">${escHtml(item.detail)}</div>
+        </div>
+      </div>
+    `).join('')
+  }</div>`;
+}
+
+/* ============================================================
+   PDF REPORT GENERATOR (jsPDF)
+   ============================================================ */
+async function generatePDFReport(data) {
+  if (!window.jspdf) {
+    showGlobalError('PDF library not loaded. Please refresh and try again.');
+    return;
+  }
+
+  const btn = document.getElementById('downloadReportBtn');
+  if (btn) { btn.innerHTML = '<span>⏳</span> Generating...'; btn.disabled = true; }
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc  = new jsPDF('p', 'mm', 'a4');
+    const W    = 210, H = 297, M = 18, CW = W - M * 2;
+    let y      = M;
+    let pageN  = 1;
+
+    // ── Colour palette ──
+    const GOLD   = [212, 175, 55];
+    const DARK   = [8,   8,  15];
+    const WHITE  = [255,255,255];
+    const LGRAY  = [245,245,252];
+    const GREEN  = [34, 197, 94];
+    const RED    = [239, 68, 68];
+    const BLUE   = [59, 130,246];
+    const ORANGE = [249,115, 22];
+
+    // ── Helpers ──
+    const rgb  = (c, type = 'text') => type === 'fill' ? doc.setFillColor(...c) : type === 'draw' ? doc.setDrawColor(...c) : doc.setTextColor(...c);
+    const font = (size, style = 'normal') => { doc.setFontSize(size); doc.setFont('helvetica', style); };
+
+    function footer() {
+      rgb(GOLD, 'fill'); doc.rect(0, H - 7, W, 7, 'F');
+      rgb([8,8,15]); font(7);
+      doc.text('King CV Checker  |  Built by Digital Web Hive', M, H - 2);
+      doc.text(`Page ${pageN}`, W - M, H - 2, { align: 'right' });
+    }
+
+    function newPage() {
+      doc.addPage(); pageN++; y = M;
+      rgb(WHITE, 'fill'); doc.rect(0, 0, W, H, 'F');
+      // Left accent bar
+      rgb([240, 230, 180], 'fill'); doc.rect(0, 0, 5, H, 'F');
+      footer();
+    }
+
+    function check(need) { if (y + need > H - 12) newPage(); }
+
+    function sectionHead(emoji, title, color) {
+      check(14); y += 4;
+      rgb(color.map(c => Math.round(c * 0.12 + 255 * 0.88)), 'fill');
+      doc.roundedRect(M, y - 4, CW, 10, 2, 2, 'F');
+      rgb(color); font(10, 'bold');
+      doc.text(`${emoji}  ${title}`, M + 4, y + 3);
+      y += 11;
+    }
+
+    function bullet(text, indent = 0, color = [70, 70, 100]) {
+      check(10);
+      const lines = doc.splitTextToSize(text, CW - indent - 6);
+      rgb(color); font(8.5, 'normal');
+      doc.text('•', M + indent + 1, y);
+      doc.text(lines, M + indent + 6, y);
+      y += lines.length * 4.8 + 1.5;
+    }
+
+    function tagRow(arr, bgColor, textColor) {
+      if (!arr || !arr.length) return;
+      const tagH = 6, tagPad = 3, gap = 2;
+      let x = M;
+      arr.slice(0, 20).forEach(tag => {
+        font(7, 'bold');
+        const tw = doc.getTextWidth(tag) + tagPad * 2;
+        if (x + tw > W - M) { x = M; y += tagH + gap; check(tagH + 4); }
+        rgb(bgColor, 'fill'); doc.roundedRect(x, y - 4.5, tw, tagH, 1.5, 1.5, 'F');
+        rgb(textColor); doc.text(tag, x + tagPad, y);
+        x += tw + gap;
+      });
+      y += tagH + 2;
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 1: COVER
+    // ══════════════════════════════════════════════════════════
+    rgb(DARK, 'fill'); doc.rect(0, 0, W, H, 'F');
+    // Gold border strips
+    rgb(GOLD, 'fill');
+    doc.rect(0, 0, W, 3, 'F'); doc.rect(0, H - 3, W, 3, 'F');
+    doc.rect(0, 0, 3, H, 'F'); doc.rect(W - 3, 0, 3, H, 'F');
+    // Title
+    rgb(GOLD); font(36, 'bold'); doc.text('KING', W / 2, 82, { align: 'center' });
+    rgb(WHITE); font(22, 'bold'); doc.text('CV CHECKER', W / 2, 96, { align: 'center' });
+    rgb(GOLD, 'draw'); doc.setLineWidth(0.4); doc.line(M + 25, 103, W - M - 25, 103);
+    rgb([200,180,120]); font(10, 'normal'); doc.text('AI-Powered CV Analysis Report', W / 2, 111, { align: 'center' });
+
+    // Score boxes
+    const bx1 = W / 2 - 48, bx2 = W / 2 + 8, by = 124, bW = 40, bH = 30;
+    rgb([20,20,36], 'fill'); doc.roundedRect(bx1, by, bW, bH, 3, 3, 'F');
+    rgb(GOLD, 'draw'); doc.setLineWidth(0.5); doc.roundedRect(bx1, by, bW, bH, 3, 3, 'S');
+    rgb(GOLD); font(20, 'bold'); doc.text(`${data.ats_score?.score ?? 0}%`, bx1 + bW / 2, by + 14, { align: 'center' });
+    rgb([160,140,80]); font(7); doc.text('ATS SCORE', bx1 + bW / 2, by + 22, { align: 'center' });
+
+    rgb([20,20,36], 'fill'); doc.roundedRect(bx2, by, bW, bH, 3, 3, 'F');
+    rgb(BLUE, 'draw'); doc.roundedRect(bx2, by, bW, bH, 3, 3, 'S');
+    rgb(BLUE); font(20, 'bold'); doc.text(`${data.job_match?.overall ?? 0}`, bx2 + bW / 2, by + 14, { align: 'center' });
+    rgb([100,130,200]); font(7); doc.text('JOB MATCH /100', bx2 + bW / 2, by + 22, { align: 'center' });
+
+    // Career badge
+    if (data.career_level) {
+      rgb([30,30,50], 'fill'); doc.roundedRect(M + 30, 162, CW - 60, 12, 3, 3, 'F');
+      rgb([180,160,100]); font(9, 'bold');
+      doc.text(`${data.career_level} Level  ·  ${data.salary_insights ? '$' + Math.round(data.salary_insights.min_usd / 1000) + 'K–$' + Math.round(data.salary_insights.max_usd / 1000) + 'K est.' : ''}`, W / 2, 170, { align: 'center' });
+    }
+
+    rgb([80,70,40]); font(8);
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`, W / 2, 184, { align: 'center' });
+    rgb(GOLD); font(8); doc.text('Built by Digital Web Hive', W / 2, H - 12, { align: 'center' });
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 2: SCORES + STRENGTHS/GAPS
+    // ══════════════════════════════════════════════════════════
+    newPage();
+    rgb(DARK); font(15, 'bold'); doc.text('Score Breakdown', M, y); y += 3;
+    rgb(GOLD, 'draw'); doc.setLineWidth(0.8); doc.line(M, y, M + 55, y); y += 8;
+
+    const subScores = [
+      ['Skills Match',      data.job_match?.skills,    GREEN],
+      ['Experience Match',  data.job_match?.experience, BLUE],
+      ['Education Fit',     data.job_match?.education,  ORANGE],
+      ['Industry Relevance',data.job_match?.industry,   GOLD],
+    ];
+    subScores.forEach(([lbl, val, col]) => {
+      check(10); val = val || 0;
+      rgb([60,60,80]); font(9); doc.text(lbl, M, y);
+      rgb([230,230,245], 'fill'); doc.roundedRect(M + 52, y - 5, 92, 6.5, 2, 2, 'F');
+      rgb(col, 'fill'); doc.roundedRect(M + 52, y - 5, 92 * (val / 100), 6.5, 2, 2, 'F');
+      rgb(col); font(9, 'bold'); doc.text(`${val}/100`, W - M, y, { align: 'right' });
+      y += 10;
+    });
+    y += 4;
+
+    sectionHead('✅', 'Key Strengths', GREEN);
+    (data.strengths || []).forEach(s => bullet(s, 0, [30, 100, 50]));
+    y += 3;
+    sectionHead('⚠️', 'Key Gaps', RED);
+    (data.gaps || []).forEach(g => bullet(g, 0, [160, 40, 40]));
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 3: KEYWORDS
+    // ══════════════════════════════════════════════════════════
+    newPage();
+    rgb(DARK); font(15, 'bold'); doc.text('Keyword Analysis', M, y); y += 3;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 55, y); y += 8;
+
+    sectionHead('✗', 'Missing Keywords — Add to Your CV', RED);
+    tagRow(data.keywords?.missing?.slice(0, 21), [255,235,235], [180,40,40]);
+    y += 4;
+    sectionHead('✓', 'Present Keywords — Already in Your CV', GREEN);
+    tagRow(data.keywords?.present?.slice(0, 21), [235,255,240], [30,120,60]);
+    y += 4;
+    sectionHead('★', 'Suggested Additions — Boost ATS Score', GOLD);
+    tagRow(data.keywords?.suggested?.slice(0, 15), [255,252,230], [120,90,10]);
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 4: BULLET REWRITES
+    // ══════════════════════════════════════════════════════════
+    newPage();
+    rgb(DARK); font(15, 'bold'); doc.text('Bullet Point Improvements', M, y); y += 3;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 70, y); y += 8;
+
+    (data.bullet_points || []).forEach(bp => {
+      const bfLines = doc.splitTextToSize(bp.original, CW - 26);
+      const afLines = doc.splitTextToSize(bp.improved, CW - 26);
+      check(bfLines.length * 5 + afLines.length * 5 + 20);
+
+      rgb([255,244,244], 'fill'); doc.roundedRect(M, y - 4, CW, bfLines.length * 5 + 8, 2, 2, 'F');
+      rgb(RED); font(7, 'bold'); doc.text('BEFORE', M + 2, y);
+      rgb([160,50,50]); font(8.5, 'normal'); doc.text(bfLines, M + 22, y); y += bfLines.length * 5 + 6;
+
+      rgb([242,255,246], 'fill'); doc.roundedRect(M, y - 4, CW, afLines.length * 5 + 8, 2, 2, 'F');
+      rgb(GREEN); font(7, 'bold'); doc.text('AFTER', M + 2, y);
+      rgb([30,100,50]); font(8.5, 'normal'); doc.text(afLines, M + 22, y); y += afLines.length * 5 + 10;
+    });
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 5: RED FLAGS + CV FEEDBACK
+    // ══════════════════════════════════════════════════════════
+    newPage();
+    rgb(DARK); font(15, 'bold'); doc.text('Red Flags & CV Feedback', M, y); y += 3;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 65, y); y += 8;
+
+    sectionHead('🚨', 'Red Flags', RED);
+    if (!data.red_flags?.length) {
+      rgb(GREEN); font(9); doc.text('No red flags detected. Your CV looks clean!', M + 4, y); y += 8;
+    } else {
+      (data.red_flags || []).forEach(f => {
+        check(14);
+        const sCol = f.severity === 'HIGH' ? RED : f.severity === 'MEDIUM' ? ORANGE : GOLD;
+        const desc  = doc.splitTextToSize(f.description, CW - 22);
+        rgb(sCol.map(c => Math.min(255, c + 190)), 'fill');
+        doc.roundedRect(M, y - 4, CW, desc.length * 4.5 + 8, 2, 2, 'F');
+        rgb(sCol); font(7, 'bold'); doc.text(f.severity, M + 2, y);
+        rgb([60,60,80]); font(8, 'normal'); doc.text(desc, M + 18, y);
+        y += desc.length * 4.5 + 9;
+      });
+    }
+
+    y += 3;
+    sectionHead('📄', 'CV Feedback', BLUE);
+    (data.cv_feedback || []).forEach(f => bullet((f.positive ? '✅ ' : '⚡ ') + f.text, 0, f.positive ? [30,100,50] : [80,80,120]));
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 6: PROFESSIONAL SUMMARY + SKILLS GAP
+    // ══════════════════════════════════════════════════════════
+    newPage();
+    rgb(DARK); font(15, 'bold'); doc.text('Professional Summary & Skills Plan', M, y); y += 3;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 80, y); y += 8;
+
+    sectionHead('🧠', 'AI-Generated Professional Summary', GOLD);
+    const sumLines = doc.splitTextToSize(data.professional_summary || '', CW - 8);
+    rgb([255,252,230], 'fill'); rgb(GOLD, 'draw'); doc.setLineWidth(0.3);
+    doc.roundedRect(M, y - 2, CW, sumLines.length * 5.2 + 8, 3, 3, 'FD');
+    rgb([80,65,15]); font(9, 'italic'); doc.text(sumLines, M + 4, y + 4);
+    y += sumLines.length * 5.2 + 14;
+
+    sectionHead('📚', 'Skills Improvement Plan', BLUE);
+    (data.skills_gap || []).forEach(skill => {
+      check(20);
+      const pCol = skill.priority === 'HIGH' ? RED : skill.priority === 'MEDIUM' ? ORANGE : BLUE;
+      const descL = doc.splitTextToSize(skill.description, CW - 26);
+      rgb(pCol.map(c => Math.min(255, c + 185)), 'fill');
+      doc.roundedRect(M, y - 4, CW, descL.length * 4.5 + 16, 2, 2, 'F');
+      rgb(pCol); font(7, 'bold'); doc.text(skill.priority, M + 2, y);
+      rgb(DARK); font(9.5, 'bold'); doc.text(skill.skill, M + 20, y);
+      rgb([70,70,100]); font(7.5, 'normal'); doc.text(descL, M + 20, y + 5);
+      rgb(GOLD); font(7, 'italic'); doc.text('📚 ' + skill.resource, M + 20, y + descL.length * 4.5 + 6);
+      y += descL.length * 4.5 + 18;
+    });
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 7: INTERVIEW INSIGHTS + ATS TIPS
+    // ══════════════════════════════════════════════════════════
+    newPage();
+    rgb(DARK); font(15, 'bold'); doc.text('Interview Insights & ATS Action Plan', M, y); y += 3;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 80, y); y += 8;
+
+    const insights = data.interview_insights;
+    const prob     = insights?.shortlist_probability ?? 0;
+    const pCol     = prob >= 70 ? GREEN : prob >= 40 ? GOLD : RED;
+
+    rgb(LGRAY, 'fill'); doc.roundedRect(M, y, CW, 26, 3, 3, 'F');
+    rgb(DARK); font(10, 'bold'); doc.text('Shortlisting Probability', M + 4, y + 9);
+    rgb(pCol); font(22, 'bold'); doc.text(`${prob}%`, W - M - 2, y + 11, { align: 'right' });
+    const sumL = doc.splitTextToSize(insights?.summary || '', CW - 10);
+    rgb([80,80,110]); font(7.5, 'normal'); doc.text(sumL, M + 4, y + 17);
+    y += 32;
+
+    sectionHead('🎤', 'Predicted Interview Questions', BLUE);
+    (insights?.questions || []).forEach((q, i) => {
+      check(14);
+      const qL = doc.splitTextToSize(q, CW - 18);
+      rgb([240,245,255], 'fill'); doc.roundedRect(M, y - 4, CW, qL.length * 4.5 + 8, 2, 2, 'F');
+      rgb(BLUE); font(8, 'bold'); doc.text(`Q${i+1}.`, M + 2, y);
+      rgb([50,60,100]); font(8, 'normal'); doc.text(qL, M + 13, y);
+      y += qL.length * 4.5 + 10;
+    });
+
+    y += 3;
+    sectionHead('💡', 'Top ATS Boost Tips', GOLD);
+    (data.ats_boost_tips || []).slice(0, 5).forEach(tip => {
+      check(16);
+      const detL = doc.splitTextToSize(`${tip.title}: ${tip.detail}`, CW - 26);
+      rgb([255,252,230], 'fill'); doc.roundedRect(M, y - 4, CW, detL.length * 4.5 + 8, 2, 2, 'F');
+      const pC = tip.priority === 'HIGH' ? RED : tip.priority === 'MEDIUM' ? ORANGE : BLUE;
+      rgb(pC); font(7, 'bold'); doc.text(tip.priority, M + 2, y);
+      rgb([80,70,20]); font(8, 'normal'); doc.text(detL, M + 20, y);
+      y += detL.length * 4.5 + 10;
+    });
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 8: LINKEDIN + TAILORING CHECKLIST
+    // ══════════════════════════════════════════════════════════
+    newPage();
+    rgb(DARK); font(15, 'bold'); doc.text('LinkedIn & Tailoring Checklist', M, y); y += 3;
+    rgb(GOLD, 'draw'); doc.line(M, y, M + 72, y); y += 8;
+
+    sectionHead('🔗', 'LinkedIn Headline', [0, 119, 181]);
+    const li = data.linkedin_headline;
+    if (li) {
+      [['Primary', li.primary], ['Alternative', li.alternative]].forEach(([lbl, text]) => {
+        check(20);
+        rgb([8,24,40], 'fill'); doc.roundedRect(M, y - 2, CW, 16, 3, 3, 'F');
+        rgb([74,158,255]); font(7, 'bold'); doc.text(lbl, M + 3, y + 3);
+        rgb([220,235,255]); font(8.5, 'bold');
+        const hLines = doc.splitTextToSize(text, CW - 8);
+        doc.text(hLines, M + 3, y + 9); y += hLines.length * 4.5 + 16;
+      });
+      const tipL = doc.splitTextToSize(li.tip, CW - 8);
+      rgb(LGRAY, 'fill'); doc.roundedRect(M, y - 2, CW, tipL.length * 4.5 + 8, 2, 2, 'F');
+      rgb([60,60,100]); font(7.5, 'normal'); doc.text(tipL, M + 3, y + 3); y += tipL.length * 4.5 + 12;
+    }
+
+    y += 3;
+    sectionHead('✅', 'CV Tailoring Checklist', GREEN);
+    (data.tailoring_checklist || []).forEach(item => {
+      check(14);
+      const detL = doc.splitTextToSize(item.detail, CW - 26);
+      const pC   = item.priority === 'HIGH' ? RED : item.priority === 'MEDIUM' ? ORANGE : BLUE;
+      rgb(pC.map(c => Math.min(255, c + 185)), 'fill');
+      doc.roundedRect(M, y - 4, CW, detL.length * 4.5 + 9, 2, 2, 'F');
+      rgb(pC); font(7, 'bold'); doc.text(item.priority, M + 2, y);
+      rgb(DARK); font(8.5, 'bold'); doc.text(item.task, M + 18, y);
+      rgb([70,70,100]); font(7.5, 'normal'); doc.text(detL, M + 18, y + 5);
+      y += detL.length * 4.5 + 11;
+    });
+
+    // ── Save ──
+    doc.save(`King-CV-Report-${Date.now()}.pdf`);
+
+  } finally {
+    if (btn) { btn.innerHTML = '<span>⬇️</span> Download Report'; btn.disabled = false; }
+  }
 }

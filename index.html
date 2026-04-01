@@ -216,6 +216,9 @@
 
       </div>
 
+      <!-- Crown Badge Row -->
+      <div class="crown-badge-row" id="crownBadgeRow"></div>
+
       <!-- Results Grid -->
       <div class="results-grid">
 
@@ -302,6 +305,54 @@
           <div class="card-body" id="interviewContent"></div>
         </div>
 
+        <!-- 💡 ATS Boost Tips -->
+        <div class="result-card wide-card premium-card" id="cardATSTips">
+          <div class="card-header">
+            <span class="card-icon">💡</span>
+            <h3 class="card-title">ATS Boost Tips</h3>
+            <span class="card-badge gold-badge">Action Plan</span>
+          </div>
+          <div class="card-body" id="atsTipsContent"></div>
+        </div>
+
+        <!-- ⚡ Power Score + 🎯 Career Level -->
+        <div class="result-card" id="cardPower">
+          <div class="card-header">
+            <span class="card-icon">⚡</span>
+            <h3 class="card-title">CV Power Score</h3>
+          </div>
+          <div class="card-body" id="powerContent"></div>
+        </div>
+
+        <div class="result-card" id="cardCareer">
+          <div class="card-header">
+            <span class="card-icon">🎯</span>
+            <h3 class="card-title">Career Level &amp; Salary Insights</h3>
+            <span class="card-badge">Estimated</span>
+          </div>
+          <div class="card-body" id="careerContent"></div>
+        </div>
+
+        <!-- 🔗 LinkedIn Headline -->
+        <div class="result-card wide-card premium-card" id="cardLinkedIn">
+          <div class="card-header">
+            <span class="card-icon">🔗</span>
+            <h3 class="card-title">LinkedIn Headline Generator</h3>
+            <span class="card-badge gold-badge">Copy &amp; Paste Ready</span>
+          </div>
+          <div class="card-body" id="linkedinContent"></div>
+        </div>
+
+        <!-- ✅ Tailoring Checklist -->
+        <div class="result-card wide-card" id="cardChecklist">
+          <div class="card-header">
+            <span class="card-icon">✅</span>
+            <h3 class="card-title">CV Tailoring Checklist</h3>
+            <span class="card-badge gold-badge">Your Next Steps</span>
+          </div>
+          <div class="card-body" id="checklistContent"></div>
+        </div>
+
       </div>
 
       <!-- Quick Actions Bar -->
@@ -377,6 +428,8 @@
   </script>
   <!-- DOCX text extraction (mammoth.js) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+  <!-- PDF report generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- Analysis engine (client-side — no server required) -->
   <script src="analyze.js"></script>
   <script src="script.js"></script>

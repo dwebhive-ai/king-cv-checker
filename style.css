@@ -1483,6 +1483,375 @@ h1, h2, h3  { line-height: 1.2; }
 }
 
 /* ------------------------------------------------------------
+   PREMIUM CARD VARIANT
+   ------------------------------------------------------------ */
+.premium-card {
+  border-color: var(--border-gold) !important;
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(212,175,55,0.04) 100%);
+}
+
+.premium-card .card-header {
+  border-bottom-color: var(--border-gold);
+}
+
+/* ------------------------------------------------------------
+   CROWN BADGE ROW
+   ------------------------------------------------------------ */
+.crown-badge-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-xl);
+}
+
+.crown-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--radius-full);
+  border: 2px solid;
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  animation: badgePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.badge-platinum {
+  background: linear-gradient(135deg, #e8e8f0, #fff);
+  border-color: #a0a0c0;
+  color: #3a3a5a;
+  box-shadow: 0 4px 20px rgba(160,160,192,0.4);
+}
+
+.badge-gold {
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold-light));
+  border-color: var(--gold-main);
+  color: #0a0800;
+  box-shadow: 0 4px 20px rgba(212,175,55,0.45);
+}
+
+.badge-silver {
+  background: linear-gradient(135deg, #888, #bbb);
+  border-color: #999;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(140,140,140,0.4);
+}
+
+.badge-bronze {
+  background: linear-gradient(135deg, #8B5E3C, #C4813A);
+  border-color: #A0652A;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(139,94,60,0.4);
+}
+
+/* ------------------------------------------------------------
+   ATS BOOST TIPS
+   ------------------------------------------------------------ */
+.ats-tip-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  margin-bottom: var(--space-sm);
+  transition: border-color var(--transition), transform var(--transition);
+}
+
+.ats-tip-item:last-child { margin-bottom: 0; }
+
+.ats-tip-item:hover {
+  border-color: var(--border-gold);
+  transform: translateX(3px);
+}
+
+.ats-tip-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.ats-tip-body {}
+
+.ats-tip-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.ats-tip-detail {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.ats-tip-impact {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--green);
+  background: var(--green-muted);
+  border: 1px solid rgba(34,197,94,0.25);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  align-self: center;
+}
+
+/* ------------------------------------------------------------
+   POWER SCORE
+   ------------------------------------------------------------ */
+.power-score-display {
+  text-align: center;
+  padding: var(--space-lg) 0;
+}
+
+.power-score-num {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.power-level-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  margin-top: var(--space-sm);
+}
+
+.power-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.power-stat {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  text-align: center;
+}
+
+.power-stat-num {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--gold-main);
+}
+
+.power-stat-label {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.power-verb-row {
+  margin-top: var(--space-md);
+}
+
+.power-verb-row-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+/* ------------------------------------------------------------
+   CAREER LEVEL + SALARY
+   ------------------------------------------------------------ */
+.career-level-display {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-gold);
+  margin-bottom: var(--space-lg);
+}
+
+.career-level-icon { font-size: 2rem; }
+
+.career-level-label {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--gold-main);
+  letter-spacing: -0.02em;
+}
+
+.career-level-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.salary-range {
+  text-align: center;
+  padding: var(--space-lg);
+  background: linear-gradient(135deg, var(--bg-secondary), rgba(212,175,55,0.05));
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+}
+
+.salary-figures {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--gold-main);
+  letter-spacing: -0.03em;
+  margin-bottom: var(--space-xs);
+}
+
+.salary-period {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.salary-tip {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-top: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--gold-dark);
+}
+
+/* ------------------------------------------------------------
+   LINKEDIN HEADLINE
+   ------------------------------------------------------------ */
+.linkedin-headline-box {
+  background: linear-gradient(135deg, #0a1628, #0d1f3c);
+  border: 1px solid #1e3a5f;
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  position: relative;
+}
+
+.linkedin-headline-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #4a9eff;
+  margin-bottom: var(--space-sm);
+}
+
+.linkedin-headline-text {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e8f4ff;
+  line-height: 1.4;
+  margin-bottom: var(--space-sm);
+}
+
+.linkedin-copy-btn {
+  background: rgba(74,158,255,0.15);
+  border: 1px solid rgba(74,158,255,0.3);
+  color: #4a9eff;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.linkedin-copy-btn:hover {
+  background: rgba(74,158,255,0.25);
+}
+
+.linkedin-tip {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding: var(--space-md);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border-left: 3px solid #0077b5;
+}
+
+/* ------------------------------------------------------------
+   TAILORING CHECKLIST
+   ------------------------------------------------------------ */
+.checklist-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+.checklist-item {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition);
+  cursor: default;
+}
+
+.checklist-item:hover { border-color: var(--border-gold); }
+
+.checklist-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+.checklist-body {}
+
+.checklist-task {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.checklist-detail {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.checklist-priority {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+@media (max-width: 640px) {
+  .checklist-grid { grid-template-columns: 1fr; }
+  .power-stats    { grid-template-columns: 1fr 1fr; }
+}
+
+/* ------------------------------------------------------------
    ERROR BANNER
    ------------------------------------------------------------ */
 .error-banner {

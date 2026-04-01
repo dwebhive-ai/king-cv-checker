@@ -119,17 +119,29 @@ async function analyzeCV(cvText, jobDescription) {
   if (aiResult) return aiResult;
 
   // Rule-based analysis
+  const keywords    = analyzeKeywords(cvLower, jdLower);
+  const atsScore    = calculateATSScore(cvLower, jdLower);
+  const jobMatch    = calculateJobMatch(cvLower, jdLower);
+  const redFlags    = detectRedFlags(cvText, cvLower);
+
   return {
-    ats_score:            calculateATSScore(cvLower, jdLower),
-    job_match:            calculateJobMatch(cvLower, jdLower),
+    ats_score:            atsScore,
+    job_match:            jobMatch,
     ...analyzeStrengthsAndGaps(cvLower, jdLower),
-    keywords:             analyzeKeywords(cvLower, jdLower),
+    keywords,
     bullet_points:        improveBulletPoints(cvText),
     skills_gap:           analyzeSkillsGap(cvLower, jdLower),
     cv_feedback:          generateCVFeedback(cvText, cvLower),
-    red_flags:            detectRedFlags(cvText, cvLower),
+    red_flags:            redFlags,
     professional_summary: generateProfessionalSummary(cvText, jobDescription),
     interview_insights:   generateInterviewInsights(cvLower, jdLower),
+    // ── NEW PREMIUM MODULES ──
+    ats_boost_tips:       generateATSBoostTips(cvLower, jdLower, keywords),
+    power_score:          calculatePowerScore(cvText),
+    career_level:         detectCareerLevel(cvLower),
+    salary_insights:      estimateSalaryRange(cvLower, jdLower),
+    linkedin_headline:    generateLinkedInHeadline(cvText, jobDescription),
+    tailoring_checklist:  generateTailoringChecklist(cvLower, jdLower, keywords, redFlags),
   };
 }
 
@@ -692,4 +704,264 @@ function generateInterviewInsights(cvLower, jdLower) {
   ].slice(0, 8);
 
   return { shortlist_probability: prob, probability_label: label, summary, questions };
+}
+
+// ============================================================
+// MODULE 11: ATS BOOST TIPS
+// ============================================================
+
+function generateATSBoostTips(cvLower, jdLower, keywords) {
+  const tips = [];
+
+  if (keywords.missing.length > 0) {
+    const top = keywords.missing.slice(0, 5).join(', ');
+    tips.push({
+      priority: 'HIGH', icon: '🔑',
+      title: 'Inject Missing Keywords',
+      detail: `Add these exact terms from the job description into your CV naturally: ${top}.`,
+      impact: '+15–25% ATS score',
+    });
+  }
+
+  if (!/summary|profile|objective|about/i.test(cvLower)) {
+    tips.push({
+      priority: 'HIGH', icon: '📝',
+      title: 'Add a Keyword-Rich Professional Summary',
+      detail: 'Place a 3–4 sentence summary at the top of your CV packed with role-specific keywords. ATS systems weight the summary section very heavily.',
+      impact: '+10–20% ATS score',
+    });
+  }
+
+  if (!/\d+%|\d+x|\$[\d,]+/i.test(cvLower)) {
+    tips.push({
+      priority: 'HIGH', icon: '📊',
+      title: 'Quantify Every Achievement',
+      detail: 'Replace vague statements with numbers. "Managed a team" becomes "Managed a team of 12, delivering 3 projects ahead of schedule." Numbers signal credibility to both ATS and humans.',
+      impact: '+8–12% interview shortlist rate',
+    });
+  }
+
+  tips.push({
+    priority: 'MEDIUM', icon: '📄',
+    title: 'Save CV as a Simple .docx or ATS-Friendly PDF',
+    detail: 'Avoid tables, columns, text boxes, and headers/footers — these break ATS parsing. Use a single-column layout with standard section headings.',
+    impact: 'Prevents 100% ATS rejection',
+  });
+
+  tips.push({
+    priority: 'MEDIUM', icon: '🏷️',
+    title: 'Use Standard Section Headings',
+    detail: 'ATS systems scan for exact labels. Use: Work Experience, Education, Skills, Certifications. Avoid creative names like "My Journey" or "Where I\'ve Been".',
+    impact: 'Ensures correct ATS parsing',
+  });
+
+  if (!cvLower.includes('skills')) {
+    tips.push({
+      priority: 'HIGH', icon: '⚡',
+      title: 'Add a Dedicated Skills Section',
+      detail: 'Create a clear Skills section listing all relevant technical and soft skills. This is the #1 section ATS robots scan for keyword density.',
+      impact: '+20% keyword match rate',
+    });
+  }
+
+  const jdKwCount = Object.keys(extractKeywords(jdLower)).length;
+  if (jdKwCount > 0 && keywords.present.length / jdKwCount < 0.5) {
+    tips.push({
+      priority: 'HIGH', icon: '🎯',
+      title: 'Mirror the Job Description Language Exactly',
+      detail: 'Copy exact phrases from the job posting. If the JD says "stakeholder management", do not write "managing stakeholders" — ATS matches exact strings.',
+      impact: 'Direct ATS score improvement',
+    });
+  }
+
+  const strongVerbs = ['achieved','delivered','built','launched','led','drove','increased','reduced','managed','designed','engineered','spearheaded','optimized'];
+  if (strongVerbs.filter(v => cvLower.includes(v)).length < 4) {
+    tips.push({
+      priority: 'MEDIUM', icon: '💪',
+      title: 'Start Every Bullet With a Power Verb',
+      detail: 'Begin each achievement with an impactful verb: Engineered, Spearheaded, Transformed, Delivered, Orchestrated, Reduced, Generated. This signals initiative to both ATS and readers.',
+      impact: 'Stronger recruiter impression',
+    });
+  }
+
+  if (!cvLower.includes('linkedin')) {
+    tips.push({
+      priority: 'MEDIUM', icon: '🔗',
+      title: 'Add Your LinkedIn URL',
+      detail: 'Include a custom LinkedIn URL in your CV header. Recruiters verify LinkedIn profiles 87% of the time after shortlisting a CV.',
+      impact: 'Increases recruiter trust',
+    });
+  }
+
+  if (!/certif|certified|credential/i.test(cvLower) && /certif|certified/i.test(jdLower)) {
+    tips.push({
+      priority: 'HIGH', icon: '🏆',
+      title: 'Earn and List Relevant Certifications',
+      detail: 'The job description references certifications. Earn the specific cert the employer mentions (AWS, PMP, Google Analytics). Even "In Progress" certifications are worth listing.',
+      impact: '+15% recruiter confidence',
+    });
+  }
+
+  return tips.slice(0, 8);
+}
+
+// ============================================================
+// MODULE 12: POWER SCORE
+// ============================================================
+
+function calculatePowerScore(cvText) {
+  const cvLower = cvText.toLowerCase();
+  const powerVerbs = [
+    'achieved','accelerated','architected','automated','built','championed',
+    'consolidated','created','delivered','deployed','designed','developed',
+    'directed','drove','eliminated','engineered','established','executed',
+    'expanded','generated','grew','implemented','improved','increased',
+    'innovated','launched','led','managed','mentored','negotiated',
+    'optimized','orchestrated','overhauled','pioneered','produced',
+    'reduced','refactored','restructured','scaled','secured','simplified',
+    'solved','spearheaded','streamlined','transformed','tripled','won',
+  ];
+  const clichePhrases = [
+    'responsible for','duties included','helped with','worked on',
+    'assisted in','team player','hard worker','go-getter','detail oriented',
+    'think outside','synergy','passionate about','dynamic professional',
+  ];
+
+  const foundPower   = powerVerbs.filter(v => cvLower.includes(v));
+  const foundCliches = clichePhrases.filter(c => cvLower.includes(c));
+  const metricsCount = (cvText.match(/\d+[%x]?|\$[\d,]+/gi) || []).length;
+
+  const rawScore    = Math.min(100, Math.round((foundPower.length / 12) * 60 + (metricsCount / 8) * 40));
+  const finalScore  = Math.max(0, Math.min(100, rawScore - foundCliches.length * 5));
+  const level       = finalScore >= 80 ? 'Elite' : finalScore >= 60 ? 'Strong' : finalScore >= 40 ? 'Average' : 'Weak';
+
+  return {
+    score:               finalScore,
+    level,
+    power_verbs_found:   foundPower.slice(0, 10),
+    cliches_found:       foundCliches,
+    metrics_count:       metricsCount,
+    power_verbs_missing: powerVerbs.filter(v => !cvLower.includes(v)).slice(0, 8),
+  };
+}
+
+// ============================================================
+// MODULE 13: CAREER LEVEL DETECTION
+// ============================================================
+
+function detectCareerLevel(cvLower) {
+  if (['ceo','cto','coo','cfo','chief','president','founder','co-founder','executive director'].some(s => cvLower.includes(s))) return 'Executive';
+  if (['director','vice president','vp ','head of','general manager'].some(s => cvLower.includes(s)))                           return 'Director';
+  if (['lead','principal','staff engineer','senior manager','team lead','engineering manager'].some(s => cvLower.includes(s)))   return 'Lead';
+  if (['senior','sr.','sr ','7 years','8 years','9 years','10 years','11 years','12 years'].some(s => cvLower.includes(s)))      return 'Senior';
+  if (['3 years','4 years','5 years','6 years','mid-level','mid level'].some(s => cvLower.includes(s)))                          return 'Mid-Level';
+  if (['junior','jr.','jr ','entry level','graduate','intern','fresh'].some(s => cvLower.includes(s)))                           return 'Junior';
+  return 'Mid-Level';
+}
+
+// ============================================================
+// MODULE 14: SALARY INSIGHTS
+// ============================================================
+
+function estimateSalaryRange(cvLower, jdLower) {
+  const level = detectCareerLevel(cvLower);
+  const baseRanges = {
+    'Executive': [150000, 260000], 'Director': [110000, 180000],
+    'Lead':      [95000,  145000], 'Senior':   [75000,  125000],
+    'Mid-Level': [50000,  80000],  'Junior':   [32000,  52000],
+  };
+  const highValueSkills = ['aws','kubernetes','machine learning','tensorflow','react',
+    'node.js','python','typescript','azure','gcp','docker','golang','rust',
+    'blockchain','llm','openai','data science','cybersecurity','salesforce'];
+
+  const cvHV = highValueSkills.filter(s => cvLower.includes(s)).length;
+  const jdHV = highValueSkills.filter(s => jdLower.includes(s)).length;
+  const range = baseRanges[level] || [45000, 70000];
+  const adj   = Math.min(cvHV, jdHV) * 4000;
+
+  return {
+    level,
+    min_usd: range[0] + adj,
+    max_usd: range[1] + adj,
+    note: 'Estimated based on detected skills and career level. Varies by location, industry, and company size.',
+    negotiation_tip: cvHV >= 3
+      ? 'Your high-demand tech stack gives you strong negotiation leverage — aim for the top of the range.'
+      : 'Upskilling in high-demand technologies (AWS, Python, React) can add $10–20K to your salary ceiling.',
+  };
+}
+
+// ============================================================
+// MODULE 15: LINKEDIN HEADLINE GENERATOR
+// ============================================================
+
+function generateLinkedInHeadline(cvText, jobDescription) {
+  const cvLower = cvText.toLowerCase();
+  const jdLower = jobDescription.toLowerCase();
+  const level   = detectCareerLevel(cvLower);
+  const domain  = detectDomain(cvLower, jdLower);
+  const matched = getTechSkills().filter(s => cvLower.includes(s) && jdLower.includes(s)).slice(0, 3)
+    .map(s => s.charAt(0).toUpperCase() + s.slice(1));
+  const skillStr  = matched.join(' | ');
+  const jdTitle   = extractJobTitle(jobDescription.trim().split('\n')[0]) || 'Professional';
+
+  return {
+    primary:     `${level} ${jdTitle} | ${domain}${skillStr ? ' | ' + skillStr : ''}`.slice(0, 220),
+    alternative: `${jdTitle} | Specialising in ${domain}${skillStr ? ' | ' + skillStr : ''}`.slice(0, 220),
+    tip: 'Keep your headline under 220 characters. Use | separators for role, speciality, and top skills. Recruiters use keywords here to filter candidates on LinkedIn.',
+  };
+}
+
+// ============================================================
+// MODULE 16: TAILORING CHECKLIST
+// ============================================================
+
+function generateTailoringChecklist(cvLower, jdLower, keywords, redFlags) {
+  const items = [];
+  const order = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+
+  if (keywords.missing.length >= 5) {
+    items.push({ priority: 'HIGH', icon: '🔑',
+      task: `Add ${Math.min(8, keywords.missing.length)} missing keywords to your CV`,
+      detail: `Focus on: ${keywords.missing.slice(0, 5).join(', ')}` });
+  }
+  if (!/summary|profile|objective/i.test(cvLower)) {
+    items.push({ priority: 'HIGH', icon: '📝',
+      task: 'Write a tailored professional summary',
+      detail: 'Use the AI-generated summary from this report — paste it at the top of your CV.' });
+  }
+  if (!/\d+%|\d+x|\$[\d,]+/i.test(cvLower)) {
+    items.push({ priority: 'HIGH', icon: '📊',
+      task: 'Add quantified achievements to every job role',
+      detail: 'Aim for 2–3 metrics per role: %, £/$, headcount, time saved, revenue impact.' });
+  }
+  (redFlags || []).filter(f => f.severity === 'HIGH').forEach(f => {
+    items.push({ priority: 'HIGH', icon: '🚨', task: 'Fix red flag', detail: f.description });
+  });
+  if (!cvLower.includes('linkedin')) {
+    items.push({ priority: 'MEDIUM', icon: '🔗',
+      task: 'Add LinkedIn URL to your CV header',
+      detail: 'Format: linkedin.com/in/yourname. Customise your URL in LinkedIn settings first.' });
+  }
+  if (!cvLower.includes('skills')) {
+    items.push({ priority: 'MEDIUM', icon: '⚡',
+      task: 'Add a dedicated Skills section',
+      detail: 'List all technical tools, platforms, and methodologies. Mirror the JD language.' });
+  }
+  const missingTech = getTechSkills().filter(s => jdLower.includes(s) && !cvLower.includes(s));
+  if (missingTech.length > 0) {
+    items.push({ priority: 'MEDIUM', icon: '💻',
+      task: 'Update Skills section with required technologies',
+      detail: `Add where applicable: ${missingTech.slice(0, 5).join(', ')}` });
+  }
+  items.push({ priority: 'LOW', icon: '✏️',
+    task: 'Replace weak verbs with power verbs throughout',
+    detail: 'Use the rewritten bullet points in this report as a style guide for all your roles.' });
+  items.push({ priority: 'LOW', icon: '🎨',
+    task: 'Ensure consistent formatting throughout',
+    detail: 'One font family, consistent date formats (Month YYYY), uniform bullet style.' });
+  items.push({ priority: 'LOW', icon: '👀',
+    task: 'Proofread with Grammarly or Hemingway App',
+    detail: 'Typos and grammar errors lose interviews. Both tools have free tiers.' });
+
+  return items.sort((a, b) => order[a.priority] - order[b.priority]);
 }
