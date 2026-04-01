@@ -1,0 +1,16 @@
+# Uploaded CV files (if temporarily stored)
+uploads/
+tmp/
+
+# Environment / secrets
+.env
+.env.local
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

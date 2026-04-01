@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>👑 King CV Checker — AI-Powered CV Analysis</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ====================================================
+       HEADER
+  ===================================================== -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="crown-icon">👑</span>
+        <span class="logo-text">King <span class="gold">CV Checker</span></span>
+      </div>
+      <nav class="header-nav">
+        <span class="nav-badge">AI-Powered</span>
+        <span class="nav-badge gold-badge">Free Analysis</span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ====================================================
+       HERO SECTION
+  ===================================================== -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="container">
+      <h1 class="hero-title">
+        Get Your CV <span class="gold-text">Crowned</span><br/>
+        by Artificial Intelligence
+      </h1>
+      <p class="hero-subtitle">
+        Upload your CV and paste a job description. Our AI engine scores your match,
+        finds gaps, rewrites weak lines, and gives you royal-level career advice.
+      </p>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num">11</span><span class="stat-label">Analysis Sections</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">100</span><span class="stat-label">Point Scoring</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">ATS</span><span class="stat-label">Optimized</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================
+       UPLOAD FORM SECTION
+  ===================================================== -->
+  <section class="upload-section">
+    <div class="container">
+      <div class="form-card" id="formCard">
+
+        <!-- Step Indicator -->
+        <div class="steps">
+          <div class="step active" id="step1">
+            <div class="step-circle">1</div>
+            <span>Upload CV</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" id="step2">
+            <div class="step-circle">2</div>
+            <span>Job Description</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" id="step3">
+            <div class="step-circle">3</div>
+            <span>Get Analysis</span>
+          </div>
+        </div>
+
+        <form id="cvForm" enctype="multipart/form-data" novalidate>
+
+          <!-- File Upload -->
+          <div class="form-group">
+            <label class="form-label">
+              <span class="label-icon">📄</span> Upload Your CV
+            </label>
+            <div class="drop-zone" id="dropZone">
+              <input type="file" id="cvFile" name="cv_file" accept=".pdf,.docx,.txt" hidden />
+              <div class="drop-zone-content" id="dropContent">
+                <div class="upload-icon">📂</div>
+                <p class="drop-title">Drag &amp; drop your CV here</p>
+                <p class="drop-sub">or <button type="button" class="link-btn" id="browseBtn">browse files</button></p>
+                <p class="drop-formats">Supported: PDF, DOCX, TXT &nbsp;·&nbsp; Max 5MB</p>
+              </div>
+              <div class="file-preview" id="filePreview" style="display:none;">
+                <div class="file-icon-large">📋</div>
+                <div class="file-info">
+                  <p class="file-name" id="fileName">filename.pdf</p>
+                  <p class="file-size" id="fileSize">0 KB</p>
+                </div>
+                <button type="button" class="remove-file" id="removeFile" title="Remove file">✕</button>
+              </div>
+            </div>
+            <div class="field-error" id="fileError"></div>
+          </div>
+
+          <!-- Job Description -->
+          <div class="form-group">
+            <label class="form-label" for="jobDescription">
+              <span class="label-icon">💼</span> Paste Job Description
+            </label>
+            <textarea
+              id="jobDescription"
+              name="job_description"
+              class="job-textarea"
+              placeholder="Paste the full job description here...&#10;&#10;Include: job title, responsibilities, required skills, qualifications, and any other details for the best analysis."
+              rows="10"
+            ></textarea>
+            <div class="textarea-footer">
+              <div class="field-error" id="jdError"></div>
+              <span class="char-count"><span id="charCount">0</span> characters</span>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="analyze-btn" id="analyzeBtn">
+            <span class="btn-crown">👑</span>
+            <span class="btn-text">Analyze My CV</span>
+            <span class="btn-arrow">→</span>
+          </button>
+
+          <p class="form-note">
+            🔒 Your CV is processed securely and never stored permanently.
+          </p>
+
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================
+       LOADING OVERLAY
+  ===================================================== -->
+  <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+    <div class="loading-card">
+      <div class="crown-spinner">👑</div>
+      <h3 class="loading-title">Analyzing Your CV...</h3>
+      <p class="loading-sub" id="loadingMsg">Extracting content from your CV</p>
+      <div class="loading-bar-wrap">
+        <div class="loading-bar" id="loadingBar"></div>
+      </div>
+      <div class="loading-steps" id="loadingSteps">
+        <div class="loading-step active" id="ls1">📄 Reading CV content</div>
+        <div class="loading-step" id="ls2">🔍 Scanning keywords</div>
+        <div class="loading-step" id="ls3">🧠 Running AI analysis</div>
+        <div class="loading-step" id="ls4">✨ Generating insights</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       RESULTS SECTION
+  ===================================================== -->
+  <section class="results-section" id="resultsSection" style="display:none;">
+    <div class="container">
+
+      <!-- Results Header -->
+      <div class="results-header">
+        <h2 class="results-title">👑 Your CV Analysis Report</h2>
+        <p class="results-sub">Here's your complete royal breakdown</p>
+        <button class="re-analyze-btn" id="reAnalyzeBtn">← Analyze Another CV</button>
+      </div>
+
+      <!-- Score Overview Row -->
+      <div class="score-overview">
+
+        <!-- ATS Score Ring -->
+        <div class="score-card main-score" id="atsCard">
+          <div class="score-ring-wrap">
+            <svg class="score-ring" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="50"/>
+              <circle class="ring-fill ats-ring" cx="60" cy="60" r="50" id="atsRingFill"/>
+            </svg>
+            <div class="score-ring-text">
+              <span class="score-num" id="atsScoreNum">0</span>
+              <span class="score-pct">%</span>
+            </div>
+          </div>
+          <div class="score-label">👑 ATS Score</div>
+          <div class="score-verdict" id="atsVerdict">Calculating...</div>
+        </div>
+
+        <!-- Job Match Score Ring -->
+        <div class="score-card main-score" id="matchCard">
+          <div class="score-ring-wrap">
+            <svg class="score-ring" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="50"/>
+              <circle class="ring-fill match-ring" cx="60" cy="60" r="50" id="matchRingFill"/>
+            </svg>
+            <div class="score-ring-text">
+              <span class="score-num" id="matchScoreNum">0</span>
+              <span class="score-pct">/100</span>
+            </div>
+          </div>
+          <div class="score-label">🎯 Job Match</div>
+          <div class="score-verdict" id="matchVerdict">Calculating...</div>
+        </div>
+
+        <!-- Sub Scores -->
+        <div class="score-card sub-scores-card">
+          <h3 class="sub-title">Score Breakdown</h3>
+          <div class="sub-scores" id="subScores">
+            <!-- Dynamically rendered -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Results Grid -->
+      <div class="results-grid">
+
+        <!-- ✅ Key Strengths -->
+        <div class="result-card" id="cardStrengths">
+          <div class="card-header">
+            <span class="card-icon">✅</span>
+            <h3 class="card-title">Key Strengths</h3>
+          </div>
+          <div class="card-body" id="strengthsContent"></div>
+        </div>
+
+        <!-- ⚠️ Key Gaps -->
+        <div class="result-card" id="cardGaps">
+          <div class="card-header">
+            <span class="card-icon">⚠️</span>
+            <h3 class="card-title">Key Gaps</h3>
+          </div>
+          <div class="card-body" id="gapsContent"></div>
+        </div>
+
+        <!-- 🔑 Missing Keywords -->
+        <div class="result-card wide-card" id="cardKeywords">
+          <div class="card-header">
+            <span class="card-icon">🔑</span>
+            <h3 class="card-title">Keyword Analysis</h3>
+          </div>
+          <div class="card-body" id="keywordsContent"></div>
+        </div>
+
+        <!-- ✍️ Rewritten Bullet Points -->
+        <div class="result-card wide-card" id="cardBullets">
+          <div class="card-header">
+            <span class="card-icon">✍️</span>
+            <h3 class="card-title">Rewritten Bullet Points</h3>
+            <span class="card-badge">AI Enhanced</span>
+          </div>
+          <div class="card-body" id="bulletsContent"></div>
+        </div>
+
+        <!-- 📚 Skills Improvement Plan -->
+        <div class="result-card" id="cardSkills">
+          <div class="card-header">
+            <span class="card-icon">📚</span>
+            <h3 class="card-title">Skills Improvement Plan</h3>
+          </div>
+          <div class="card-body" id="skillsContent"></div>
+        </div>
+
+        <!-- 📄 CV Feedback -->
+        <div class="result-card" id="cardFeedback">
+          <div class="card-header">
+            <span class="card-icon">📄</span>
+            <h3 class="card-title">CV Feedback</h3>
+          </div>
+          <div class="card-body" id="feedbackContent"></div>
+        </div>
+
+        <!-- 🚨 Red Flags -->
+        <div class="result-card" id="cardRedFlags">
+          <div class="card-header">
+            <span class="card-icon">🚨</span>
+            <h3 class="card-title">Red Flags</h3>
+          </div>
+          <div class="card-body" id="redFlagsContent"></div>
+        </div>
+
+        <!-- 🧠 Professional Summary -->
+        <div class="result-card wide-card" id="cardSummary">
+          <div class="card-header">
+            <span class="card-icon">🧠</span>
+            <h3 class="card-title">AI-Generated Professional Summary</h3>
+            <span class="card-badge gold-badge">Ready to Use</span>
+          </div>
+          <div class="card-body" id="summaryContent"></div>
+        </div>
+
+        <!-- 🎤 Interview Insights -->
+        <div class="result-card wide-card" id="cardInterview">
+          <div class="card-header">
+            <span class="card-icon">🎤</span>
+            <h3 class="card-title">Interview Insights</h3>
+          </div>
+          <div class="card-body" id="interviewContent"></div>
+        </div>
+
+      </div>
+
+      <!-- CTA Footer -->
+      <div class="results-cta">
+        <p>Want deeper AI analysis with GPT-4 or Claude?</p>
+        <button class="analyze-btn secondary-btn" id="reAnalyzeBtn2">Analyze Another CV 👑</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ====================================================
+       FOOTER
+  ===================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <p>👑 King CV Checker &nbsp;·&nbsp; AI-Powered Career Intelligence &nbsp;·&nbsp; Built for Winners</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
