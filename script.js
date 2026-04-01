@@ -109,9 +109,6 @@ function initFileUpload() {
  * Validate and display a selected file
  */
 function handleFileSelect(file) {
-  const allowedTypes = ['application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'text/plain'];
   const allowedExts = ['pdf', 'docx', 'txt'];
   const ext = file.name.split('.').pop().toLowerCase();
   const maxSize = 5 * 1024 * 1024; // 5 MB
@@ -219,35 +216,34 @@ function initFormSubmission() {
 }
 
 /* ------------------------------------------------------------
-   ASYNC ANALYSIS REQUEST
+   ASYNC ANALYSIS REQUEST (fully client-side — no server needed)
    ------------------------------------------------------------ */
 async function runAnalysis(formData) {
   state.isAnalyzing = true;
   dom.analyzeBtn().disabled = true;
 
-  // Show loading overlay
   showLoading();
 
   try {
-    const response = await fetch('analyze.php', {
-      method: 'POST',
-      body: formData,
-    });
+    // Step 1: Extract text from uploaded file in the browser
+    const cvText = await extractTextFromFile(state.file);
 
-    if (!response.ok) {
-      throw new Error(`Server error: ${response.status} ${response.statusText}`);
+    if (!cvText || cvText.trim().length < 80) {
+      throw new Error(
+        'Could not extract readable text from your CV. ' +
+        'Try saving as TXT or DOCX for best results.'
+      );
     }
 
-    const result = await response.json();
+    const jobDescription = formData.get('job_description');
 
-    if (!result.success) {
-      throw new Error(result.message || 'Analysis failed. Please try again.');
-    }
+    // Step 2: Run full analysis (analyze.js — pure JavaScript)
+    const data = await analyzeCV(cvText, jobDescription);
 
-    // Render results
-    state.analysisData = result.data;
+    // Step 3: Render results
+    state.analysisData = data;
     hideLoading();
-    renderResults(result.data);
+    renderResults(data);
 
   } catch (err) {
     hideLoading();
@@ -288,7 +284,6 @@ function showLoading() {
 
   let progress = 0;
   let stepTimer = 0;
-  const totalTime = 3500; // ms
 
   loadingInterval = setInterval(() => {
     progress += 1.5;

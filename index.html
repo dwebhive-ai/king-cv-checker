@@ -321,6 +321,18 @@
     </div>
   </footer>
 
+  <!-- PDF text extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+  <!-- DOCX text extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <!-- Analysis engine (client-side) -->
+  <script src="analyze.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
