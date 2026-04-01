@@ -1123,7 +1123,7 @@ function generateScoreProvisions(atsScore, cvLower, jdLower, keywords) {
         effort: 'Quick Win — 5 min',
       },
     ];
-    const filler = fillers[(provisions.length - 7) % fillers.length];
+    const filler = fillers[provisions.length % fillers.length];
     provisions.push({ number: provisions.length + 1, effort: filler.effort, ...filler });
   }
 
