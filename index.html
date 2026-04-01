@@ -315,23 +315,33 @@
   <!-- ====================================================
        FOOTER
   ===================================================== -->
+  <!-- Global Error Banner -->
+  <div class="error-banner" id="errorBanner" style="display:none;">
+    <div class="error-banner-inner">
+      <span class="error-banner-icon">⚠️</span>
+      <span class="error-banner-msg" id="errorBannerMsg"></span>
+      <button class="error-banner-close" id="errorBannerClose">✕</button>
+    </div>
+  </div>
+
   <footer class="site-footer">
     <div class="container">
       <p>👑 King CV Checker &nbsp;·&nbsp; AI-Powered Career Intelligence &nbsp;·&nbsp; Built for Winners</p>
     </div>
   </footer>
 
-  <!-- PDF text extraction -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- PDF text extraction (pdf.js via unpkg — always available) -->
+  <script src="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.min.js"></script>
   <script>
+    // Set worker source immediately after pdf.js loads
     if (window.pdfjsLib) {
       pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        'https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
     }
   </script>
-  <!-- DOCX text extraction -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-  <!-- Analysis engine (client-side) -->
+  <!-- DOCX text extraction (mammoth.js) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+  <!-- Analysis engine (client-side — no server required) -->
   <script src="analyze.js"></script>
   <script src="script.js"></script>
 </body>

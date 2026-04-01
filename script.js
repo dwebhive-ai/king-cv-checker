@@ -225,6 +225,20 @@ async function runAnalysis(formData) {
   showLoading();
 
   try {
+    // Guard: ensure analysis engine loaded
+    if (typeof analyzeCV !== 'function') {
+      throw new Error('Analysis engine failed to load. Please hard-refresh the page (Ctrl+Shift+R) and try again.');
+    }
+
+    // Guard: check PDF library if needed
+    const ext = state.file.name.split('.').pop().toLowerCase();
+    if (ext === 'pdf' && !window.pdfjsLib) {
+      throw new Error('PDF reader library failed to load. Please check your internet connection and refresh the page, or upload a DOCX/TXT file instead.');
+    }
+    if (ext === 'docx' && !window.mammoth) {
+      throw new Error('DOCX reader library failed to load. Please check your internet connection and refresh the page, or upload a TXT file instead.');
+    }
+
     // Step 1: Extract text from uploaded file in the browser
     const cvText = await extractTextFromFile(state.file);
 
@@ -344,7 +358,23 @@ function resetToForm() {
    GLOBAL ERROR DISPLAY
    ------------------------------------------------------------ */
 function showGlobalError(message) {
+  // Restore upload form
   dom.uploadSection().style.display = 'block';
+
+  // Show prominent bottom banner
+  const banner    = document.getElementById('errorBanner');
+  const bannerMsg = document.getElementById('errorBannerMsg');
+  const closeBtn  = document.getElementById('errorBannerClose');
+
+  if (banner && bannerMsg) {
+    bannerMsg.textContent = message;
+    banner.style.display  = 'block';
+    closeBtn.onclick = () => { banner.style.display = 'none'; };
+    // Auto-dismiss after 10 seconds
+    setTimeout(() => { banner.style.display = 'none'; }, 10000);
+  }
+
+  // Also show inline under file upload for context
   showFileError(message);
   console.error('[King CV Checker]', message);
 }

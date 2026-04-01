@@ -1313,6 +1313,57 @@ h1, h2, h3  { line-height: 1.2; }
 }
 
 /* ------------------------------------------------------------
+   ERROR BANNER
+   ------------------------------------------------------------ */
+.error-banner {
+  position: fixed;
+  bottom: var(--space-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  width: min(90vw, 600px);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+}
+
+.error-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: #1a0a0a;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(239,68,68,0.1);
+}
+
+.error-banner-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+.error-banner-msg {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #fca5a5;
+  line-height: 1.5;
+}
+
+.error-banner-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 4px;
+  flex-shrink: 0;
+  transition: color var(--transition);
+}
+
+.error-banner-close:hover { color: var(--red); }
+
+/* ------------------------------------------------------------
    SCROLL BAR
    ------------------------------------------------------------ */
 ::-webkit-scrollbar { width: 6px; }
