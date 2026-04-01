@@ -31,6 +31,7 @@
        HERO SECTION
   ===================================================== -->
   <section class="hero">
+    <div class="hero-grid"></div>
     <div class="hero-glow"></div>
     <div class="container">
       <h1 class="hero-title">
@@ -303,10 +304,20 @@
 
       </div>
 
-      <!-- CTA Footer -->
-      <div class="results-cta">
-        <p>Want deeper AI analysis with GPT-4 or Claude?</p>
-        <button class="analyze-btn secondary-btn" id="reAnalyzeBtn2">Analyze Another CV 👑</button>
+      <!-- Quick Actions Bar -->
+      <div class="quick-actions-bar">
+        <div class="qa-label">📋 Your report is ready:</div>
+        <div class="qa-buttons">
+          <button class="qa-btn" id="downloadReportBtn">
+            <span>⬇️</span> Download Report
+          </button>
+          <button class="qa-btn" id="copyReportBtn">
+            <span>📋</span> Copy Full Report
+          </button>
+          <button class="qa-btn qa-btn-gold" id="reAnalyzeBtn2">
+            <span>👑</span> Analyze Another CV
+          </button>
+        </div>
       </div>
 
     </div>
@@ -324,9 +335,34 @@
     </div>
   </div>
 
+  <!-- Scroll Progress Bar -->
+  <div class="scroll-progress" id="scrollProgress"></div>
+
+  <!-- Floating Score Badge (appears after analysis) -->
+  <div class="floating-badge" id="floatingBadge" style="display:none;">
+    <div class="fb-ring">
+      <span class="fb-score" id="fbScore">0</span>
+      <span class="fb-label">ATS</span>
+    </div>
+  </div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:999;display:none;"></canvas>
+
   <footer class="site-footer">
     <div class="container">
-      <p>👑 King CV Checker &nbsp;·&nbsp; AI-Powered Career Intelligence &nbsp;·&nbsp; Built for Winners</p>
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <span class="crown-icon" style="font-size:1.2rem;">👑</span>
+          <span><strong>King CV Checker</strong> — AI-Powered Career Intelligence</span>
+        </div>
+        <div class="footer-built">
+          Built by
+          <a href="https://digitalwebhive.com" target="_blank" rel="noopener" class="footer-link">
+            Digital Web Hive
+          </a>
+        </div>
+      </div>
     </div>
   </footer>
 

@@ -1263,15 +1263,185 @@ h1, h2, h3  { line-height: 1.2; }
 }
 
 /* ------------------------------------------------------------
+   SCROLL PROGRESS BAR
+   ------------------------------------------------------------ */
+.scroll-progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--gold-dark), var(--gold-light));
+  z-index: 200;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.6);
+}
+
+/* ------------------------------------------------------------
+   FLOATING SCORE BADGE
+   ------------------------------------------------------------ */
+.floating-badge {
+  position: fixed;
+  bottom: var(--space-xl);
+  right: var(--space-xl);
+  z-index: 150;
+  animation: badgePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes badgePop {
+  from { transform: scale(0) rotate(-20deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+}
+
+.fb-ring {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold-light));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.45), 0 0 0 3px rgba(212, 175, 55, 0.15);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fb-ring:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgba(212, 175, 55, 0.6);
+}
+
+.fb-score {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #0a0800;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.fb-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #0a0800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ------------------------------------------------------------
+   HERO GRID BACKGROUND
+   ------------------------------------------------------------ */
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(212, 175, 55, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 175, 55, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------
+   QUICK ACTIONS BAR
+   ------------------------------------------------------------ */
+.quick-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg) var(--space-xl);
+  margin-bottom: var(--space-xl);
+  box-shadow: var(--shadow-gold);
+}
+
+.qa-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.qa-buttons {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.qa-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.55rem 1.1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.qa-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.qa-btn.qa-btn-gold {
+  background: var(--gold-muted);
+  border-color: var(--border-gold);
+  color: var(--gold-main);
+}
+
+.qa-btn.qa-btn-gold:hover {
+  background: rgba(212, 175, 55, 0.2);
+  box-shadow: var(--shadow-gold);
+}
+
+/* ------------------------------------------------------------
    SITE FOOTER
    ------------------------------------------------------------ */
 .site-footer {
   border-top: 1px solid var(--border);
   padding: var(--space-xl) 0;
-  text-align: center;
   color: var(--text-muted);
   font-size: 0.8rem;
 }
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--text-muted);
+}
+
+.footer-built {
+  color: var(--text-muted);
+}
+
+.footer-link {
+  color: var(--gold-main);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color var(--transition);
+}
+
+.footer-link:hover { color: var(--gold-light); text-decoration: underline; }
 
 /* ------------------------------------------------------------
    ANIMATIONS

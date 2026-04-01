@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initJobDescriptionInput();
   initFormSubmission();
   initReanalyzeButtons();
+  initScrollProgress();
 });
 
 /* ------------------------------------------------------------
@@ -341,9 +342,188 @@ function initReanalyzeButtons() {
   });
 }
 
+/* ------------------------------------------------------------
+   SCROLL PROGRESS BAR
+   ------------------------------------------------------------ */
+function initScrollProgress() {
+  const bar = document.getElementById('scrollProgress');
+  if (!bar) return;
+  window.addEventListener('scroll', () => {
+    const scrollTop  = document.documentElement.scrollTop;
+    const scrollMax  = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width  = (scrollMax > 0 ? (scrollTop / scrollMax) * 100 : 0) + '%';
+  }, { passive: true });
+}
+
+/* ------------------------------------------------------------
+   FLOATING SCORE BADGE
+   ------------------------------------------------------------ */
+function showFloatingBadge(score) {
+  const badge = document.getElementById('floatingBadge');
+  const num   = document.getElementById('fbScore');
+  if (!badge || !num) return;
+  num.textContent   = score;
+  badge.style.display = 'block';
+  // Clicking the badge scrolls back to the ATS score card
+  badge.addEventListener('click', () => {
+    document.getElementById('atsCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
+/* ------------------------------------------------------------
+   CONFETTI (fires when ATS score >= 70)
+   ------------------------------------------------------------ */
+function launchConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  if (!canvas) return;
+  canvas.style.display = 'block';
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx     = canvas.getContext('2d');
+
+  const colors  = ['#ffd700','#d4af37','#fff8dc','#f0e68c','#ffffff','#b8860b'];
+  const pieces  = Array.from({ length: 120 }, () => ({
+    x:    Math.random() * canvas.width,
+    y:    Math.random() * -canvas.height,
+    w:    Math.random() * 10 + 4,
+    h:    Math.random() * 6  + 3,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    rot:  Math.random() * Math.PI * 2,
+    vx:   (Math.random() - 0.5) * 3,
+    vy:   Math.random() * 4 + 2,
+    vr:   (Math.random() - 0.5) * 0.15,
+  }));
+
+  let frame;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.rot += p.vr;
+      p.vy += 0.05; // gravity
+      if (p.y > canvas.height) { p.y = -20; p.x = Math.random() * canvas.width; }
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    frame = requestAnimationFrame(draw);
+  }
+  draw();
+  setTimeout(() => { cancelAnimationFrame(frame); canvas.style.display = 'none'; }, 4000);
+}
+
+/* ------------------------------------------------------------
+   DOWNLOAD REPORT
+   ------------------------------------------------------------ */
+function downloadReport(data) {
+  const ats   = data.ats_score;
+  const match = data.job_match;
+  const lines = [
+    '╔══════════════════════════════════════════════════════════╗',
+    '║              👑 KING CV CHECKER — ANALYSIS REPORT       ║',
+    '║              Built by Digital Web Hive                  ║',
+    '╚══════════════════════════════════════════════════════════╝',
+    '',
+    `Generated: ${new Date().toLocaleString()}`,
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '👑 ATS SCORE',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    `Score: ${ats.score}%  (${ats.matched} of ${ats.total} keywords matched)`,
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '🎯 JOB MATCH SCORE',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    `Overall:             ${match.overall}/100`,
+    `Skills Match:        ${match.skills}/100`,
+    `Experience Match:    ${match.experience}/100`,
+    `Education Fit:       ${match.education}/100`,
+    `Industry Relevance:  ${match.industry}/100`,
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '✅ KEY STRENGTHS',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    ...(data.strengths || []).map(s => `• ${s}`),
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '⚠️ KEY GAPS',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    ...(data.gaps || []).map(g => `• ${g}`),
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '🔑 MISSING KEYWORDS',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    (data.keywords?.missing || []).join(', ') || 'None',
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '🚨 RED FLAGS',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    ...(data.red_flags || []).map(f => `[${f.severity}] ${f.description}`),
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '🧠 PROFESSIONAL SUMMARY',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    data.professional_summary || '',
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '🎤 INTERVIEW INSIGHTS',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    `Shortlisting Probability: ${data.interview_insights?.shortlist_probability}% — ${data.interview_insights?.probability_label}`,
+    '',
+    'Predicted Interview Questions:',
+    ...(data.interview_insights?.questions || []).map((q, i) => `Q${i+1}. ${q}`),
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '👑 King CV Checker  |  Built by Digital Web Hive',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+  ];
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `king-cv-report-${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ------------------------------------------------------------
+   COPY FULL REPORT
+   ------------------------------------------------------------ */
+function copyFullReport(data) {
+  const summary = [
+    `👑 CV Analysis Report — King CV Checker`,
+    `ATS Score: ${data.ats_score?.score}% | Job Match: ${data.job_match?.overall}/100`,
+    ``,
+    `✅ Strengths: ${(data.strengths || []).join(' | ')}`,
+    `⚠️ Gaps: ${(data.gaps || []).join(' | ')}`,
+    `🔑 Missing Keywords: ${(data.keywords?.missing || []).slice(0,10).join(', ')}`,
+    ``,
+    `🧠 Professional Summary:`,
+    data.professional_summary || '',
+    ``,
+    `Built by Digital Web Hive — King CV Checker`,
+  ].join('\n');
+
+  navigator.clipboard.writeText(summary).then(() => {
+    const btn = document.getElementById('copyReportBtn');
+    if (btn) {
+      btn.innerHTML = '<span>✅</span> Copied!';
+      setTimeout(() => { btn.innerHTML = '<span>📋</span> Copy Full Report'; }, 2500);
+    }
+  });
+}
+
 function resetToForm() {
   dom.resultsSection().style.display = 'none';
   dom.uploadSection().style.display = 'block';
+  const badge = document.getElementById('floatingBadge');
+  if (badge) badge.style.display = 'none';
   clearFile();
   dom.jobDesc().value = '';
   dom.charCount().textContent = '0';
@@ -392,7 +572,7 @@ function renderResults(data) {
     dom.resultsSection().scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 100);
 
-  // Render each section with slight delays for staggered animation
+  // Render all sections
   renderScores(data);
   renderStrengths(data.strengths);
   renderGaps(data.gaps);
@@ -403,6 +583,18 @@ function renderResults(data) {
   renderRedFlags(data.red_flags);
   renderProfessionalSummary(data.professional_summary);
   renderInterviewInsights(data.interview_insights);
+
+  // Wire up quick action buttons
+  document.getElementById('downloadReportBtn')?.addEventListener('click', () => downloadReport(data));
+  document.getElementById('copyReportBtn')?.addEventListener('click', () => copyFullReport(data));
+
+  // Floating badge
+  showFloatingBadge(data.ats_score?.score ?? 0);
+
+  // Confetti for high scorers
+  if ((data.ats_score?.score ?? 0) >= 70) {
+    setTimeout(launchConfetti, 800);
+  }
 }
 
 /* ------------------------------------------------------------
