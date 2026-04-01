@@ -68,7 +68,7 @@ function initFileUpload() {
   // Click to browse
   browseBtn.addEventListener('click', () => fileInput.click());
   dropZone.addEventListener('click', (e) => {
-    if (!e.target.closest('.file-preview') && !e.target.closest('.remove-file')) {
+    if (!e.target.closest('.file-preview') && !e.target.closest('.remove-file') && !e.target.closest('.link-btn')) {
       fileInput.click();
     }
   });
@@ -593,6 +593,7 @@ function renderResults(data) {
   renderTailoringChecklist(data.tailoring_checklist);
 
   // Render new ultra-premium sections
+  renderRoleExperienceRewrite(data.role_experience_rewrite);
   renderScoreProvisions(data.score_provisions, data.ats_score?.score ?? 0);
 
   // Wire up quick action buttons
@@ -1159,6 +1160,56 @@ function renderTailoringChecklist(items) {
             &nbsp;${escHtml(item.task)}
           </div>
           <div class="checklist-detail">${escHtml(item.detail)}</div>
+        </div>
+      </div>
+    `).join('')
+  }</div>`;
+}
+
+/* ------------------------------------------------------------
+   ROLE EXPERIENCE REWRITE ADVISOR
+   ------------------------------------------------------------ */
+function renderRoleExperienceRewrite(data) {
+  const el    = document.getElementById('roleExpContent');
+  const intro = document.getElementById('roleExpIntro');
+  if (!el) return;
+
+  if (!data || !data.suggestions || !data.suggestions.length) {
+    el.innerHTML = '<p>Upload a CV with more content to get role-specific tailoring advice.</p>';
+    return;
+  }
+
+  if (intro) {
+    intro.textContent = `${data.suggestions.length} targeted rewrites to make your CV land for "${data.targetRole}" roles — based on your job description analysis. Each suggestion directly boosts your ATS score.`;
+  }
+
+  el.innerHTML = `<div class="role-exp-list">${
+    data.suggestions.map((s, i) => `
+      <div class="role-exp-item">
+        <div class="role-exp-header">
+          <div class="role-exp-num">${i + 1}</div>
+          <div class="role-exp-meta">
+            <span class="role-exp-section">${escHtml(s.section)}</span>
+            <span class="role-exp-badges">
+              <span class="role-exp-priority priority-${s.priority.toLowerCase()}">${escHtml(s.priority)}</span>
+              <span class="role-exp-boost">+${escHtml(s.ats_boost)} ATS</span>
+            </span>
+          </div>
+        </div>
+        <div class="role-exp-body">
+          <div class="role-exp-current">
+            <span class="role-exp-label lbl-issue">Current Issue</span>
+            <p class="role-exp-text">${escHtml(s.current)}</p>
+          </div>
+          <div class="role-exp-arrow">&#8594;</div>
+          <div class="role-exp-rewrite">
+            <span class="role-exp-label lbl-rewrite">Suggested Rewrite</span>
+            <p class="role-exp-text rewrite-text">${escHtml(s.rewrite)}</p>
+          </div>
+        </div>
+        <div class="role-exp-tip">
+          <span class="tip-icon">&#128161;</span>
+          <span class="tip-text">${escHtml(s.tip)}</span>
         </div>
       </div>
     `).join('')

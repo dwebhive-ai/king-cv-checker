@@ -143,8 +143,9 @@ async function analyzeCV(cvText, jobDescription) {
     linkedin_headline:    generateLinkedInHeadline(cvText, jobDescription),
     tailoring_checklist:  generateTailoringChecklist(cvLower, jdLower, keywords, redFlags),
     // ── SCORE PROVISIONS + CV REWRITE ──
-    score_provisions:     generateScoreProvisions(atsScore.score, cvLower, jdLower, keywords),
-    rewritten_cv:         rewriteCVContent(cvText, jobDescription),
+    score_provisions:        generateScoreProvisions(atsScore.score, cvLower, jdLower, keywords),
+    rewritten_cv:            rewriteCVContent(cvText, jobDescription),
+    role_experience_rewrite: generateRoleExperienceRewrite(cvText, jobDescription),
   };
 }
 
@@ -445,7 +446,7 @@ function improveBulletPoints(cvText, jobDescription) {
 
   // ── Pass 1: lines with explicit weak phrases ──
   for (const line of lines) {
-    if (improvements.length >= 8) break;
+    if (improvements.length >= 10) break;
     const ll = line.toLowerCase();
     const weak = weakPatterns.find(p => ll.includes(p));
     if (!weak || usedLines.has(line)) continue;
@@ -467,7 +468,7 @@ function improveBulletPoints(cvText, jobDescription) {
   // These are still improvable even without a weak trigger word.
   const startsWeak = /^(managed|handled|created|prepared|reviewed|maintained|supported|provided|processed|performed|completed|carried out|undertook)/i;
   for (const line of lines) {
-    if (improvements.length >= 8) break;
+    if (improvements.length >= 10) break;
     if (usedLines.has(line)) continue;
     if (!startsWeak.test(line)) continue;
     if (/\d+[%x×]?|\$[\d,]+/i.test(line)) continue; // already has a metric — leave it
@@ -501,6 +502,10 @@ function improveBulletPoints(cvText, jobDescription) {
         improved: 'Led cross-functional product launch coordination for 3 major releases, achieving 110% of launch-week revenue targets on each occasion.' },
       { original: 'Responsible for managing relationships with agencies and suppliers.',
         improved: 'Negotiated and managed relationships with 6 external agencies, reducing agency spend by 22% while maintaining quality scores above 4.5/5.' },
+      { original: 'Worked on improving brand visibility and online presence.',
+        improved: 'Elevated brand visibility by 78% through a targeted SEO and content strategy, growing organic traffic from 12K to 42K monthly sessions within 8 months.' },
+      { original: 'Helped track campaign performance and report results to the team.',
+        improved: 'Automated campaign performance reporting using Google Data Studio, reducing weekly reporting time by 4 hours and improving decision-making speed by 30%.' },
     ],
     sales: [
       { original: 'Responsible for managing a portfolio of client accounts.',
@@ -515,6 +520,10 @@ function improveBulletPoints(cvText, jobDescription) {
         improved: 'Facilitated weekly pipeline reviews for a team of 8 AEs, implementing deal-scoring methodology that improved forecast accuracy to 91%.' },
       { original: 'Responsible for maintaining the CRM and updating deal records.',
         improved: 'Enforced CRM hygiene standards across the sales team, improving data completeness to 98% and enabling automated reporting that saved 5 hours of admin per week.' },
+      { original: 'Worked on upselling and cross-selling to existing clients.',
+        improved: 'Drove upsell and cross-sell revenue of £380K annually by identifying expansion opportunities within existing accounts, increasing average contract value by 34%.' },
+      { original: 'Helped build relationships with new business prospects.',
+        improved: 'Built a new business pipeline of 65+ qualified opportunities through targeted outreach and referral programmes, contributing to 42% of total team revenue in Q3.' },
     ],
     data: [
       { original: 'Responsible for managing and analysing datasets.',
@@ -529,6 +538,10 @@ function improveBulletPoints(cvText, jobDescription) {
         improved: 'Led data governance framework rollout across 6 departments, reducing data errors by 55% and achieving GDPR compliance 3 months ahead of deadline.' },
       { original: 'Responsible for querying databases and producing reports.',
         improved: 'Optimised 40+ complex SQL queries, reducing average report generation time from 4 minutes to 18 seconds and supporting decisions worth £6M+ annually.' },
+      { original: 'Helped with maintaining data infrastructure and storage solutions.',
+        improved: 'Modernised data infrastructure by migrating on-premise warehouse to cloud (AWS Redshift), reducing storage costs by 48% and improving query performance by 3x.' },
+      { original: 'Participated in building machine learning models for business teams.',
+        improved: 'Collaborated with data scientists to productionise 2 ML models, cutting manual review workload by 60% and generating £1.5M in operational savings within 12 months.' },
     ],
     operations: [
       { original: 'Responsible for overseeing daily operational activities.',
@@ -543,18 +556,21 @@ function improveBulletPoints(cvText, jobDescription) {
         improved: 'Contributed to quarterly strategic planning cycles, developing operational roadmaps that reduced time-to-market for 4 key initiatives by an average of 6 weeks.' },
       { original: 'Responsible for managing budgets and financial reporting.',
         improved: 'Managed £1.8M operational budget with 99.2% accuracy, implementing variance analysis processes that identified £210K in avoidable spend within the first quarter.' },
+      { original: 'Helped with implementing new systems and tools for the team.',
+        improved: 'Spearheaded the rollout of a new operations management platform across 4 departments, cutting manual admin by 35% and achieving full adoption in 6 weeks — 3 weeks ahead of plan.' },
+      { original: 'Worked on health and safety compliance and audit preparation.',
+        improved: 'Led compliance overhaul across all operational sites, achieving a 98% audit score — up from 74% — and eliminating all critical findings within a single review cycle.' },
     ],
   };
 
   const fallbacks = contextFallbacks[jdRoleHint] || contextFallbacks.operations;
   let fi = 0;
-  while (improvements.length < 6 && fi < fallbacks.length) {
-    // Only add fallback if its original line isn't essentially already covered
+  while (improvements.length < 8 && fi < fallbacks.length) {
     improvements.push(fallbacks[fi++]);
   }
 
-  // Cap at 8 to keep the section focused and premium
-  return improvements.slice(0, 8);
+  // Cap at 10 to keep the section focused and premium
+  return improvements.slice(0, 10);
 }
 
 // ============================================================
@@ -1224,7 +1240,177 @@ function generateScoreProvisions(atsScore, cvLower, jdLower, keywords) {
 }
 
 // ============================================================
-// MODULE 18: CV REWRITER (for PDF Part 1)
+// MODULE 18: ROLE EXPERIENCE REWRITE ADVISOR
+// ============================================================
+
+function generateRoleExperienceRewrite(cvText, jobDescription) {
+  const cvLower  = cvText.toLowerCase();
+  const jdLower  = jobDescription.toLowerCase();
+
+  const jdFirstLine = jobDescription.trim().split('\n')[0];
+  const targetRole  = extractJobTitle(jdFirstLine) || 'this role';
+  const domain      = detectDomain(cvLower, jdLower);
+
+  const allSkills     = [...getTechSkills(), ...getSoftSkills()];
+  const jdSkills      = allSkills.filter(s => jdLower.includes(s));
+  const missingSkills = jdSkills.filter(s => !cvLower.includes(s)).slice(0, 6);
+  const presentSkills = jdSkills.filter(s => cvLower.includes(s)).slice(0, 5);
+
+  const jdKws = Object.keys(extractKeywords(jdLower)).filter(k => k.length > 4).slice(0, 20);
+
+  const hasSummary   = /summary|objective|profile|about me/i.test(cvLower);
+  const hasMetrics   = /\d+%|\d+x|\$[\d,]+/.test(cvText);
+  const hasLinkedIn  = /linkedin/i.test(cvLower);
+  const hasPortfolio = /github|portfolio|dribbble|behance/i.test(cvLower);
+  const wordCount    = cvText.split(/\s+/).filter(Boolean).length;
+
+  // Detect years of experience mentioned
+  const yearMatches = [...cvText.matchAll(/(\d+)\s*\+?\s*years?/gi)].map(m => parseInt(m[1]));
+  const yearsExp    = yearMatches.length ? Math.max(...yearMatches) : null;
+
+  // Top 2 JD keywords for use in rewrite snippets
+  const kw1 = jdKws[0] || 'stakeholder management';
+  const kw2 = jdKws[1] || 'cross-functional collaboration';
+  const kw3 = jdKws[2] || 'data-driven decision making';
+
+  const skillSnippet = presentSkills.length
+    ? presentSkills.slice(0, 3).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')
+    : 'your core expertise';
+
+  const suggestions = [];
+
+  // ── 1. Professional Summary (always show — highest single ATS impact) ──
+  {
+    const summarySnippet =
+      `"${yearsExp ? yearsExp + '+' : 'Experienced'} year${yearsExp !== 1 ? 's' : ''} professional in ${domain}, ` +
+      `with proven strengths in ${skillSnippet}. ` +
+      `Adept at ${kw1} and ${kw2}, with a track record of delivering measurable results for high-performance teams. ` +
+      `Applying for ${targetRole} to drive impact and contribute from day one."`;
+
+    suggestions.push({
+      section:    'Professional Summary',
+      priority:   'HIGH',
+      ats_boost:  '+12',
+      current:    hasSummary
+        ? `Your summary exists but likely doesn't mention "${targetRole}" or key JD terms like "${kw1}", "${kw2}". Recruiters read this in 6 seconds — it must signal the exact role.`
+        : 'No professional summary detected. This is the #1 most-read section and you are missing it entirely.',
+      rewrite:    summarySnippet,
+      tip:        `Paste this at the very top of your CV below your name. Swap "[X years]" with your actual figure and customise the skill names to match the JD exactly.`,
+    });
+  }
+
+  // ── 2. Skills Section ──
+  if (missingSkills.length > 0) {
+    const missing4 = missingSkills.slice(0, 4).map(s => s.charAt(0).toUpperCase() + s.slice(1));
+    suggestions.push({
+      section:   'Skills / Core Competencies',
+      priority:  'HIGH',
+      ats_boost: `+${missingSkills.length * 3}`,
+      current:   `${missingSkills.length} skill${missingSkills.length > 1 ? 's' : ''} from the JD are absent from your CV: ${missing4.join(', ')}${missingSkills.length > 4 ? ' …and more' : ''}.`,
+      rewrite:   `Add a "Core Skills" section and list: ${missingSkills.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' · ')}. Use the exact wording from the JD — ATS platforms match on literal strings.`,
+      tip:       `Even light exposure counts — if you've used a tool in any capacity, include it. Omitting it costs you ATS points every time.`,
+    });
+  }
+
+  // ── 3. Quantified Achievements ──
+  if (!hasMetrics) {
+    suggestions.push({
+      section:   'Work Experience — Achievements',
+      priority:  'HIGH',
+      ats_boost: '+10',
+      current:   'No quantified results detected. CVs without numbers are 40% less likely to reach interview stage, as ATS and recruiters scan for impact.',
+      rewrite:   `For every role, add at least one metric. Examples relevant to "${targetRole}": "Increased [KPI] by X%", "Reduced [cost/time] by £Y / Z hours", "Managed a team of N", "Delivered project on time under £X budget".`,
+      tip:       `Estimates are acceptable if you don't have exact numbers. "Approximately 30%" or "roughly 5 hours saved per week" still signals impact — vague sentences do not.`,
+    });
+  } else {
+    suggestions.push({
+      section:   'Work Experience — Achievements',
+      priority:  'MEDIUM',
+      ats_boost: '+6',
+      current:   `Good — metrics found. Now align them to the ${targetRole} context by using JD-relevant terminology: "${kw1}", "${kw3}".`,
+      rewrite:   `Review each bullet and ask: "Is this result relevant to a ${targetRole}?" If not, reframe it. For example, phrase team metrics in terms of "${kw1}" and technical results in terms of "${kw3}".`,
+      tip:       `Recruiters mentally convert your past results to "will this person hit our targets?". Frame every achievement in business-outcome language, not just task-completion language.`,
+    });
+  }
+
+  // ── 4. Role Title / Job Title alignment ──
+  {
+    const cvTitles = cvText.match(/\b(senior|junior|lead|manager|analyst|engineer|specialist|coordinator|director|consultant)\b/gi) || [];
+    const hasTitleMatch = cvTitles.some(t => jdLower.includes(t.toLowerCase()));
+    suggestions.push({
+      section:   'Job Titles in Work History',
+      priority:  hasTitleMatch ? 'MEDIUM' : 'HIGH',
+      ats_boost: '+8',
+      current:   hasTitleMatch
+        ? `Some title alignment found. Strengthen further by ensuring your most recent role title closely mirrors "${targetRole}".`
+        : `Your previous job titles don't closely mirror "${targetRole}". ATS systems weight title matches heavily.`,
+      rewrite:   `After your official job title, add a parenthetical note: e.g., "Marketing Executive (equiv. ${targetRole})". This doesn't misrepresent your title but helps ATS parsing. In your summary, explicitly state you are targeting the ${targetRole} position.`,
+      tip:       `Many ATS tools do exact title matching. Even one sentence in your summary like "…seeking to apply my experience as a ${targetRole}" can significantly lift your match score.`,
+    });
+  }
+
+  // ── 5. LinkedIn / Portfolio ──
+  if (!hasLinkedIn || !hasPortfolio) {
+    const missing = [];
+    if (!hasLinkedIn)  missing.push('LinkedIn URL');
+    if (!hasPortfolio) missing.push('GitHub / Portfolio');
+    suggestions.push({
+      section:   'Contact Header',
+      priority:  'MEDIUM',
+      ats_boost: '+5',
+      current:   `Missing from your CV header: ${missing.join(' and ')}. Many ATS platforms score on completeness of contact information.`,
+      rewrite:   `Add to your header: ${!hasLinkedIn ? 'linkedin.com/in/[yourprofile]' : ''}${!hasLinkedIn && !hasPortfolio ? ' · ' : ''}${!hasPortfolio ? 'github.com/[yourusername] or [yourportfolio.com]' : ''}`,
+      tip:       `A LinkedIn URL signals professionalism and allows recruiters to verify experience instantly. For technical or creative roles, a portfolio link can be the difference between shortlist and rejection.`,
+    });
+  }
+
+  // ── 6. CV Length ──
+  if (wordCount < 350) {
+    suggestions.push({
+      section:   'CV Length & Depth',
+      priority:  'HIGH',
+      ats_boost: '+8',
+      current:   `Your CV is only ~${wordCount} words. This is below the 450–700 word minimum that ATS and recruiters expect for a professional-level application.`,
+      rewrite:   `Expand each role with 3–4 bullet points covering: (1) what you did, (2) how you did it (tools/methods), and (3) the outcome. For "${targetRole}", highlight anything related to ${kw1}, ${kw2}, or ${kw3}.`,
+      tip:       `Thin CVs score poorly on both ATS (fewer keyword matches) and human review (no evidence of depth). Aim for 1–2 full pages of substantive, achievement-focused content.`,
+    });
+  } else if (wordCount > 1400) {
+    suggestions.push({
+      section:   'CV Length — Trim for Impact',
+      priority:  'MEDIUM',
+      ats_boost: '+4',
+      current:   `CV is ~${wordCount} words — likely exceeds 2 pages. Hiring managers skim; every line must earn its place.`,
+      rewrite:   `Cut roles older than 10 years to 1–2 bullet points maximum. Remove generic responsibilities that any CV would have. Keep only achievements directly relevant to "${targetRole}".`,
+      tip:       `Focus ruthlessly on relevance. If a line doesn't help you get the ${targetRole} role, it's occupying valuable space.`,
+    });
+  }
+
+  // ── 7. Keywords in experience section ──
+  {
+    const topMissing = Object.keys(extractKeywords(jdLower))
+      .filter(k => k.length > 5 && !cvLower.includes(k))
+      .slice(0, 5);
+    if (topMissing.length >= 3) {
+      suggestions.push({
+        section:   'Experience Bullet Points — JD Keywords',
+        priority:  'HIGH',
+        ats_boost: '+10',
+        current:   `${topMissing.length} high-frequency JD keywords are absent from your experience bullets: "${topMissing.slice(0,3).join('", "')}"${topMissing.length > 3 ? ' and more' : ''}.`,
+        rewrite:   `Weave these terms naturally into your bullet points. E.g., instead of "Improved team processes", write "Streamlined ${topMissing[0]} workflows, improving team output by 25%." The keyword must appear in full — partial matches don't always count.`,
+        tip:       `Each added keyword from this list has a direct ATS score impact. Prioritise the ones appearing more than twice in the job description.`,
+      });
+    }
+  }
+
+  return {
+    targetRole,
+    domain,
+    suggestions: suggestions.slice(0, 7),
+  };
+}
+
+// ============================================================
+// MODULE 19: CV REWRITER (for PDF Part 1)
 // ============================================================
 
 function rewriteCVContent(cvText, jobDescription) {
