@@ -572,7 +572,8 @@ function renderResults(data) {
     dom.resultsSection().scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 100);
 
-  // Render all sections
+  // Render all sections — Role Experience first (top card)
+  renderRoleExperienceRewrite(data.role_experience_rewrite);
   renderScores(data);
   renderStrengths(data.strengths);
   renderGaps(data.gaps);
@@ -584,16 +585,13 @@ function renderResults(data) {
   renderProfessionalSummary(data.professional_summary);
   renderInterviewInsights(data.interview_insights);
 
-  // Render new premium sections
+  // Render premium sections
   renderCrownBadge(data.ats_score?.score ?? 0);
   renderATSBoostTips(data.ats_boost_tips);
   renderPowerScore(data.power_score);
   renderCareerLevel(data.career_level, data.salary_insights);
   renderLinkedInHeadline(data.linkedin_headline);
   renderTailoringChecklist(data.tailoring_checklist);
-
-  // Render new ultra-premium sections
-  renderRoleExperienceRewrite(data.role_experience_rewrite);
   renderScoreProvisions(data.score_provisions, data.ats_score?.score ?? 0);
 
   // Wire up quick action buttons
@@ -1180,7 +1178,7 @@ function renderRoleExperienceRewrite(data) {
   }
 
   if (intro) {
-    intro.textContent = `${data.suggestions.length} targeted rewrites to make your CV land for "${data.targetRole}" roles — based on your job description analysis. Each suggestion directly boosts your ATS score.`;
+    intro.textContent = `${data.suggestions.length} JD-specific rewrites for "${data.targetRole}" — each with 2–3 ready-to-copy options. Pick the version that best fits your voice and paste it straight into your CV.`;
   }
 
   el.innerHTML = `<div class="role-exp-list">${
@@ -1192,28 +1190,41 @@ function renderRoleExperienceRewrite(data) {
             <span class="role-exp-section">${escHtml(s.section)}</span>
             <span class="role-exp-badges">
               <span class="role-exp-priority priority-${s.priority.toLowerCase()}">${escHtml(s.priority)}</span>
-              <span class="role-exp-boost">+${escHtml(s.ats_boost)} ATS</span>
+              <span class="role-exp-boost">${escHtml(s.ats_boost)} ATS pts</span>
             </span>
           </div>
         </div>
-        <div class="role-exp-body">
-          <div class="role-exp-current">
-            <span class="role-exp-label lbl-issue">Current Issue</span>
-            <p class="role-exp-text">${escHtml(s.current)}</p>
-          </div>
-          <div class="role-exp-arrow">&#8594;</div>
-          <div class="role-exp-rewrite">
-            <span class="role-exp-label lbl-rewrite">Suggested Rewrite</span>
-            <p class="role-exp-text rewrite-text">${escHtml(s.rewrite)}</p>
-          </div>
+        <div class="role-exp-issue">
+          <span class="role-exp-label lbl-issue">&#9888; Current Issue</span>
+          <p class="role-exp-issue-text">${escHtml(s.current)}</p>
+        </div>
+        <div class="role-exp-examples">
+          <div class="role-exp-examples-title">Choose Your Rewrite — ${(s.examples || []).length} Options</div>
+          ${(s.examples || []).map((ex, j) => `
+            <div class="role-exp-example-card" data-example="${escHtml(ex)}">
+              <div class="example-option-badge">Option ${String.fromCharCode(65 + j)}</div>
+              <p class="example-text">${escHtml(ex).replace(/\n/g, '<br>')}</p>
+              <button class="example-copy-btn" onclick="copyExample(this, '${escHtml(ex).replace(/'/g, '&apos;').replace(/\n/g, '\\n')}')">Copy</button>
+            </div>
+          `).join('')}
         </div>
         <div class="role-exp-tip">
-          <span class="tip-icon">&#128161;</span>
+          <span class="tip-label">Pro Tip</span>
           <span class="tip-text">${escHtml(s.tip)}</span>
         </div>
       </div>
     `).join('')
   }</div>`;
+}
+
+function copyExample(btn, text) {
+  const decoded = text.replace(/\\n/g, '\n').replace(/&apos;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+  navigator.clipboard.writeText(decoded).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
 }
 
 /* ------------------------------------------------------------
@@ -1400,7 +1411,105 @@ async function generatePDFReport(data) {
     rgb(GOLD); font(8); doc.text('Built by Digital Web Hive', W / 2, H - 14, { align: 'center' });
 
     // ══════════════════════════════════════════════════════════
-    // PAGE 2 — SCORES + STRENGTHS + GAPS
+    // PAGE 2 — ROLE EXPERIENCE REWRITE (JD-SPECIFIC TAILORING)
+    // ══════════════════════════════════════════════════════════
+    const rer = data.role_experience_rewrite;
+    if (rer && rer.suggestions && rer.suggestions.length) {
+      newPage();
+
+      // Page header
+      rgb(DARK); font(15, 'bold');
+      doc.text('Tailor Your CV for This Role', M, y); y += 2;
+      rgb(GOLD, 'draw'); doc.setLineWidth(0.7); doc.line(M, y, M + 78, y); y += 4;
+
+      // Sub-header pill
+      const roleStr = clean('Target: ' + rer.targetRole + '  |  Domain: ' + rer.domain);
+      const roleW = doc.getTextWidth(roleStr) + 10;
+      rgb([18, 18, 35], 'fill'); doc.roundedRect(M, y - 1, Math.min(roleW, CW), 8, 2, 2, 'F');
+      rgb(GOLD, 'draw'); doc.setLineWidth(0.3); doc.roundedRect(M, y - 1, Math.min(roleW, CW), 8, 2, 2, 'S');
+      rgb(GOLD); font(7.5, 'bold'); doc.text(roleStr, M + 5, y + 4.5); y += 13;
+
+      // Intro line
+      rgb(MID); font(7.5);
+      const rerIntroL = doc.splitTextToSize(
+        clean(`${rer.suggestions.length} JD-specific rewrites below — each includes 3 ready-to-copy options. Pick the version that best matches your voice and paste it into your CV.`), CW);
+      doc.text(rerIntroL, M, y); y += rerIntroL.length * 4.5 + 4;
+
+      rer.suggestions.forEach((s, si) => {
+        // ── Suggestion block ──
+        const issueL  = doc.splitTextToSize(clean(s.current), CW - 26);
+        const tipL    = doc.splitTextToSize(clean('Pro Tip: ' + s.tip), CW - 8);
+        const exLines = (s.examples || []).map(ex => doc.splitTextToSize(clean(ex), CW - 30));
+        const exTotal = exLines.reduce((acc, l) => acc + l.length * 4.5 + 13, 0);
+        const blockH  = issueL.length * 4.5 + exTotal + tipL.length * 4.3 + 30;
+
+        check(Math.min(blockH, H - 30));
+
+        // Header bar
+        const boostTxt = clean(s.ats_boost + ' ATS pts');
+        const prioTxt  = clean(s.priority);
+        rgb([22, 22, 38], 'fill'); doc.roundedRect(M, y - 2, CW, 10, 2, 2, 'F');
+        rgb(GOLD, 'fill'); doc.roundedRect(M, y - 2, 4, 10, 1, 1, 'F');
+
+        // Number circle
+        rgb(GOLD, 'fill'); doc.circle(M + 10, y + 3, 4.5, 'F');
+        rgb(DARK); font(7, 'bold'); doc.text(String(si + 1), M + 10, y + 5.2, { align: 'center' });
+
+        // Section title
+        rgb([220, 200, 130]); font(8.5, 'bold');
+        doc.text(clean(s.section), M + 18, y + 4.5);
+
+        // Priority badge
+        const pC = s.priority === 'HIGH' ? RED : s.priority === 'MEDIUM' ? ORANGE : BLUE;
+        const pW = doc.getTextWidth(prioTxt) + 6;
+        rgb(pC, 'fill'); doc.roundedRect(W - M - pW - 28, y, pW, 6, 1.5, 1.5, 'F');
+        rgb(WHITE); font(6, 'bold'); doc.text(prioTxt, W - M - pW - 25, y + 4.2);
+
+        // ATS boost badge
+        const bW = doc.getTextWidth(boostTxt) + 6;
+        rgb(GREEN, 'fill'); doc.roundedRect(W - M - bW, y, bW, 6, 1.5, 1.5, 'F');
+        rgb(WHITE); font(6, 'bold'); doc.text(boostTxt, W - M - bW + 3, y + 4.2);
+        y += 13;
+
+        // Issue box
+        check(issueL.length * 4.5 + 10);
+        rgb(LTRED, 'fill'); doc.roundedRect(M, y - 2, CW, issueL.length * 4.5 + 8, 1.5, 1.5, 'F');
+        rgb(RED, 'fill'); doc.roundedRect(M, y - 2, 3, issueL.length * 4.5 + 8, 0.5, 0.5, 'F');
+        rgb(RED); font(6.5, 'bold'); doc.text('CURRENT ISSUE', M + 6, y + 2);
+        rgb([100, 25, 25]); font(7.5); doc.text(issueL, M + 6, y + 7); y += issueL.length * 4.5 + 11;
+
+        // Example options
+        const optLabels = ['Option A', 'Option B', 'Option C'];
+        const optBgs    = [[240, 253, 244], [239, 246, 255], [255, 252, 230]];
+        const optFgs    = [GREEN, BLUE, DKGOLD];
+        const optBars   = [[16, 120, 55], [30, 80, 200], [120, 96, 18]];
+
+        exLines.forEach((lines, ei) => {
+          check(lines.length * 4.5 + 14);
+          const bg = optBgs[ei] || LGRAY;
+          const fg = optFgs[ei] || MID;
+          const bar = optBars[ei] || MID;
+          const lbl = optLabels[ei] || ('Option ' + (ei + 1));
+          const hh = lines.length * 4.5 + 12;
+
+          rgb(bg, 'fill'); doc.roundedRect(M, y - 2, CW, hh, 1.5, 1.5, 'F');
+          rgb(bar, 'fill'); doc.roundedRect(M, y - 2, 3, hh, 0.5, 0.5, 'F');
+          rgb(fg); font(6.5, 'bold'); doc.text(lbl, M + 6, y + 2);
+          rgb(DARK); font(8); doc.text(lines, M + 6, y + 7.5);
+          y += hh + 2;
+        });
+
+        // Tip row
+        check(tipL.length * 4.3 + 8);
+        rgb([255, 253, 235], 'fill'); doc.roundedRect(M, y - 2, CW, tipL.length * 4.3 + 8, 1.5, 1.5, 'F');
+        rgb(GOLD, 'fill'); doc.roundedRect(M, y - 2, 3, tipL.length * 4.3 + 8, 0.5, 0.5, 'F');
+        rgb(DKGOLD); font(6.5, 'bold'); doc.text('PRO TIP', M + 6, y + 2.5);
+        rgb([90, 70, 10]); font(7); doc.text(tipL, M + 6, y + 7); y += tipL.length * 4.3 + 10;
+      });
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE 3 — SCORES + STRENGTHS + GAPS
     // ══════════════════════════════════════════════════════════
     newPage();
     rgb(DARK); font(14, 'bold'); doc.text('Score Breakdown', M, y); y += 2;

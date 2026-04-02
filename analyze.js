@@ -1254,9 +1254,9 @@ function generateRoleExperienceRewrite(cvText, jobDescription) {
   const allSkills     = [...getTechSkills(), ...getSoftSkills()];
   const jdSkills      = allSkills.filter(s => jdLower.includes(s));
   const missingSkills = jdSkills.filter(s => !cvLower.includes(s)).slice(0, 6);
-  const presentSkills = jdSkills.filter(s => cvLower.includes(s)).slice(0, 5);
+  const presentSkills = jdSkills.filter(s => cvLower.includes(s)).slice(0, 6);
 
-  const jdKws = Object.keys(extractKeywords(jdLower)).filter(k => k.length > 4).slice(0, 20);
+  const jdKws = Object.keys(extractKeywords(jdLower)).filter(k => k.length > 4).slice(0, 25);
 
   const hasSummary   = /summary|objective|profile|about me/i.test(cvLower);
   const hasMetrics   = /\d+%|\d+x|\$[\d,]+/.test(cvText);
@@ -1264,148 +1264,215 @@ function generateRoleExperienceRewrite(cvText, jobDescription) {
   const hasPortfolio = /github|portfolio|dribbble|behance/i.test(cvLower);
   const wordCount    = cvText.split(/\s+/).filter(Boolean).length;
 
-  // Detect years of experience mentioned
   const yearMatches = [...cvText.matchAll(/(\d+)\s*\+?\s*years?/gi)].map(m => parseInt(m[1]));
   const yearsExp    = yearMatches.length ? Math.max(...yearMatches) : null;
+  const expStr      = yearsExp ? `${yearsExp}+ years` : 'extensive experience';
 
-  // Top 2 JD keywords for use in rewrite snippets
   const kw1 = jdKws[0] || 'stakeholder management';
   const kw2 = jdKws[1] || 'cross-functional collaboration';
   const kw3 = jdKws[2] || 'data-driven decision making';
+  const kw4 = jdKws[3] || 'strategic planning';
 
-  const skillSnippet = presentSkills.length
-    ? presentSkills.slice(0, 3).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')
-    : 'your core expertise';
+  const s1 = presentSkills.length ? presentSkills[0].charAt(0).toUpperCase() + presentSkills[0].slice(1) : 'core skills';
+  const s2 = presentSkills.length > 1 ? presentSkills[1].charAt(0).toUpperCase() + presentSkills[1].slice(1) : 'strategic expertise';
+  const s3 = presentSkills.length > 2 ? presentSkills[2].charAt(0).toUpperCase() + presentSkills[2].slice(1) : 'analytical thinking';
+  const skillSnippet = [s1, s2, s3].join(', ');
 
   const suggestions = [];
 
-  // ── 1. Professional Summary (always show — highest single ATS impact) ──
+  // ── 1. Professional Summary ──
   {
-    const summarySnippet =
-      `"${yearsExp ? yearsExp + '+' : 'Experienced'} year${yearsExp !== 1 ? 's' : ''} professional in ${domain}, ` +
-      `with proven strengths in ${skillSnippet}. ` +
-      `Adept at ${kw1} and ${kw2}, with a track record of delivering measurable results for high-performance teams. ` +
-      `Applying for ${targetRole} to drive impact and contribute from day one."`;
-
     suggestions.push({
-      section:    'Professional Summary',
-      priority:   'HIGH',
-      ats_boost:  '+12',
-      current:    hasSummary
-        ? `Your summary exists but likely doesn't mention "${targetRole}" or key JD terms like "${kw1}", "${kw2}". Recruiters read this in 6 seconds — it must signal the exact role.`
-        : 'No professional summary detected. This is the #1 most-read section and you are missing it entirely.',
-      rewrite:    summarySnippet,
-      tip:        `Paste this at the very top of your CV below your name. Swap "[X years]" with your actual figure and customise the skill names to match the JD exactly.`,
+      section:   'Professional Summary',
+      priority:  'HIGH',
+      ats_boost: '+12',
+      current:   hasSummary
+        ? `Your summary exists but likely doesn't mention "${targetRole}" or key JD terms like "${kw1}", "${kw2}". Recruiters scan this in 6 seconds — it must instantly signal the exact role.`
+        : 'No professional summary detected. This is the #1 most-read section and missing it entirely guarantees a lower ATS score.',
+      examples: [
+        `Results-driven ${domain} professional with ${expStr} and a proven record of delivering impact through ${kw1} and ${kw2}. Skilled in ${skillSnippet}, with a reputation for translating strategy into measurable outcomes. Now seeking to bring a focused, high-performance mindset to the ${targetRole} position.`,
+        `${expStr.charAt(0).toUpperCase() + expStr.slice(1)} of hands-on experience in ${domain}, specialising in ${kw1}, ${kw3}, and cross-functional delivery. Expert at aligning team capabilities with business objectives and consistently exceeding KPIs. Targeting the ${targetRole} role to drive meaningful impact from day one.`,
+        `Ambitious and results-oriented ${domain} professional known for ${kw2}, ${kw4}, and building high-trust relationships with stakeholders at every level. Brings ${expStr} of progressive responsibility and a track record of turning complex challenges into scalable solutions. Passionate about the ${targetRole} opportunity and the impact it represents.`,
+      ],
+      tip: `Use Option A for corporate/formal employers, Option B for data-driven or analytical roles, Option C for leadership or entrepreneurial culture fits. Paste directly below your name on page 1.`,
     });
   }
 
   // ── 2. Skills Section ──
-  if (missingSkills.length > 0) {
-    const missing4 = missingSkills.slice(0, 4).map(s => s.charAt(0).toUpperCase() + s.slice(1));
+  {
+    const ms = missingSkills.map(s => s.charAt(0).toUpperCase() + s.slice(1));
+    const ps = presentSkills.slice(0,4).map(s => s.charAt(0).toUpperCase() + s.slice(1));
     suggestions.push({
       section:   'Skills / Core Competencies',
-      priority:  'HIGH',
-      ats_boost: `+${missingSkills.length * 3}`,
-      current:   `${missingSkills.length} skill${missingSkills.length > 1 ? 's' : ''} from the JD are absent from your CV: ${missing4.join(', ')}${missingSkills.length > 4 ? ' …and more' : ''}.`,
-      rewrite:   `Add a "Core Skills" section and list: ${missingSkills.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' · ')}. Use the exact wording from the JD — ATS platforms match on literal strings.`,
-      tip:       `Even light exposure counts — if you've used a tool in any capacity, include it. Omitting it costs you ATS points every time.`,
+      priority:  missingSkills.length > 0 ? 'HIGH' : 'MEDIUM',
+      ats_boost: missingSkills.length > 0 ? `+${missingSkills.length * 3}` : '+6',
+      current:   missingSkills.length > 0
+        ? `${missingSkills.length} skill${missingSkills.length > 1 ? 's' : ''} listed in the JD are absent from your CV: ${ms.slice(0,4).join(', ')}. Each match adds ~3 ATS points.`
+        : `Your skills section exists — expand it to use exact JD phrasing for ${kw1} and ${kw4}.`,
+      examples: [
+        `CORE SKILLS\n${[...ms, ...ps].slice(0,8).join('  ·  ')}`,
+        `TECHNICAL SKILLS: ${ms.join(', ')}\nKEY COMPETENCIES: ${kw1.charAt(0).toUpperCase() + kw1.slice(1)} · ${kw2.charAt(0).toUpperCase() + kw2.slice(1)} · ${kw4.charAt(0).toUpperCase() + kw4.slice(1)}`,
+        `AREAS OF EXPERTISE\n${[...ms.slice(0,3), kw1, kw2, kw4].map(s => '• ' + (s.charAt(0).toUpperCase() + s.slice(1))).join('\n')}`,
+      ],
+      tip: `Format A (dot-separated) works best for ATS; Format B (categorised) works best for human readers; Format C (bulleted) suits senior or strategic roles. Use exact capitalisation from the JD.`,
     });
   }
 
-  // ── 3. Quantified Achievements ──
-  if (!hasMetrics) {
+  // ── 3. Work Experience Achievements ──
+  {
+    const verb1 = 'Delivered'; const verb2 = 'Spearheaded'; const verb3 = 'Engineered';
+    if (!hasMetrics) {
+      suggestions.push({
+        section:   'Work Experience — Quantified Achievements',
+        priority:  'HIGH',
+        ats_boost: '+10',
+        current:   `No quantified results detected. CVs without metrics are 40% less likely to reach interview stage. Every bullet should answer: "So what was the result?"`,
+        examples: [
+          `${verb1} end-to-end ${kw1} initiative for a team of 12, achieving a 34% improvement in delivery speed and reducing escalations by 28% within the first quarter.`,
+          `${verb2} ${kw2} across 3 departments, implementing a unified ${kw3} framework that cut decision-making time by 45% and saved approximately £85K in annual operational costs.`,
+          `${verb3} a ${kw4} roadmap that aligned 4 stakeholder groups and delivered 3 key milestones on schedule — 2 weeks ahead of plan — contributing to a 22% uplift in client satisfaction scores.`,
+        ],
+        tip: `Pick the example most relevant to your actual work, then swap in your real numbers. Even estimates work: "approximately 30%", "roughly £50K", "over 6 months". Round numbers are fine — blank spaces are not.`,
+      });
+    } else {
+      suggestions.push({
+        section:   'Work Experience — Role Alignment',
+        priority:  'MEDIUM',
+        ats_boost: '+8',
+        current:   `Metrics found — great start. Now reframe them using ${targetRole}-specific language. Generic results ("improved efficiency") score lower than role-specific ones ("improved ${kw1} efficiency").`,
+        examples: [
+          `Drove ${kw1} improvements that reduced process turnaround by 32%, directly supporting the team's ability to scale from 8 to 14 concurrent projects without additional headcount.`,
+          `Led ${kw2} initiative that unified reporting across 5 teams, enabling ${kw3} capability that reduced leadership decision cycles from 10 days to 3 days.`,
+          `Applied ${kw4} methodology to realign resource allocation, resulting in a 19% increase in on-time delivery and a measurable improvement in stakeholder satisfaction scores.`,
+        ],
+        tip: `The goal is to make your achievements sound like they were written by a "${targetRole}". Use the JD's exact terminology — copy-paste the key phrases from the job post directly into your bullet context.`,
+      });
+    }
+  }
+
+  // ── 4. Opening Bullet for Each Role ──
+  {
     suggestions.push({
-      section:   'Work Experience — Achievements',
+      section:   'Work Experience — Headline Bullet (Per Role)',
       priority:  'HIGH',
-      ats_boost: '+10',
-      current:   'No quantified results detected. CVs without numbers are 40% less likely to reach interview stage, as ATS and recruiters scan for impact.',
-      rewrite:   `For every role, add at least one metric. Examples relevant to "${targetRole}": "Increased [KPI] by X%", "Reduced [cost/time] by £Y / Z hours", "Managed a team of N", "Delivered project on time under £X budget".`,
-      tip:       `Estimates are acceptable if you don't have exact numbers. "Approximately 30%" or "roughly 5 hours saved per week" still signals impact — vague sentences do not.`,
-    });
-  } else {
-    suggestions.push({
-      section:   'Work Experience — Achievements',
-      priority:  'MEDIUM',
-      ats_boost: '+6',
-      current:   `Good — metrics found. Now align them to the ${targetRole} context by using JD-relevant terminology: "${kw1}", "${kw3}".`,
-      rewrite:   `Review each bullet and ask: "Is this result relevant to a ${targetRole}?" If not, reframe it. For example, phrase team metrics in terms of "${kw1}" and technical results in terms of "${kw3}".`,
-      tip:       `Recruiters mentally convert your past results to "will this person hit our targets?". Frame every achievement in business-outcome language, not just task-completion language.`,
+      ats_boost: '+9',
+      current:   `Each role in your CV should open with a powerful headline bullet that immediately states scope, scale, and relevance to "${targetRole}". Without this, recruiters can't quickly gauge the level of your experience.`,
+      examples: [
+        `Held ${expStr.includes('+') ? expStr : 'full'} responsibility for ${kw1} across a ${yearsExp ? yearsExp + '-year' : 'multi-year'} tenure, managing a direct team and delivering outcomes aligned with the ${domain} function's core KPIs.`,
+        `Served as the primary point of accountability for ${kw2} and ${kw4}, partnering with senior leadership to define priorities and translate them into executable plans with clear milestones.`,
+        `Functioned as the internal ${targetRole}-equivalent, owning the full lifecycle of ${kw3} — from initial scoping through delivery, retrospective, and continuous improvement cycles.`,
+      ],
+      tip: `This headline bullet sets the tone for the entire role entry. Recruiters decide in 3 seconds whether to read more. Make the first line count: scope + domain + outcome.`,
     });
   }
 
-  // ── 4. Role Title / Job Title alignment ──
+  // ── 5. Job Title Alignment ──
   {
     const cvTitles = cvText.match(/\b(senior|junior|lead|manager|analyst|engineer|specialist|coordinator|director|consultant)\b/gi) || [];
     const hasTitleMatch = cvTitles.some(t => jdLower.includes(t.toLowerCase()));
     suggestions.push({
-      section:   'Job Titles in Work History',
+      section:   'Job Titles — ATS Title Matching',
       priority:  hasTitleMatch ? 'MEDIUM' : 'HIGH',
       ats_boost: '+8',
       current:   hasTitleMatch
-        ? `Some title alignment found. Strengthen further by ensuring your most recent role title closely mirrors "${targetRole}".`
-        : `Your previous job titles don't closely mirror "${targetRole}". ATS systems weight title matches heavily.`,
-      rewrite:   `After your official job title, add a parenthetical note: e.g., "Marketing Executive (equiv. ${targetRole})". This doesn't misrepresent your title but helps ATS parsing. In your summary, explicitly state you are targeting the ${targetRole} position.`,
-      tip:       `Many ATS tools do exact title matching. Even one sentence in your summary like "…seeking to apply my experience as a ${targetRole}" can significantly lift your match score.`,
+        ? `Some title alignment found. Strengthen by mirroring "${targetRole}" more precisely — use the exact phrasing from the job post in your summary or a subtitle.`
+        : `Your job titles don't reflect "${targetRole}". ATS systems heavily weight title-to-title matches and this is costing you points.`,
+      examples: [
+        `[In your summary] "…${expStr} of progressive experience directly applicable to the ${targetRole} position, with a focus on ${kw1} and ${kw2}."`,
+        `[After job title] "${cvTitles[0] || 'Previous Title'} | Functional ${targetRole}" — add as a subtitle line beneath your official title, italicised.`,
+        `[In a new "Target Role" line at the top] "Applying For: ${targetRole} — ${domain.charAt(0).toUpperCase() + domain.slice(1)} Professional" — immediately signals intent to ATS and human screeners alike.`,
+      ],
+      tip: `Never fabricate titles, but creative framing is entirely professional. Parenthetical equivalencies and summary positioning are standard CV tailoring practice used by career coaches worldwide.`,
     });
   }
 
-  // ── 5. LinkedIn / Portfolio ──
-  if (!hasLinkedIn || !hasPortfolio) {
-    const missing = [];
-    if (!hasLinkedIn)  missing.push('LinkedIn URL');
-    if (!hasPortfolio) missing.push('GitHub / Portfolio');
+  // ── 6. CV Length / Depth ──
+  if (wordCount < 350 || wordCount > 1400) {
+    const tooShort = wordCount < 350;
     suggestions.push({
-      section:   'Contact Header',
-      priority:  'MEDIUM',
-      ats_boost: '+5',
-      current:   `Missing from your CV header: ${missing.join(' and ')}. Many ATS platforms score on completeness of contact information.`,
-      rewrite:   `Add to your header: ${!hasLinkedIn ? 'linkedin.com/in/[yourprofile]' : ''}${!hasLinkedIn && !hasPortfolio ? ' · ' : ''}${!hasPortfolio ? 'github.com/[yourusername] or [yourportfolio.com]' : ''}`,
-      tip:       `A LinkedIn URL signals professionalism and allows recruiters to verify experience instantly. For technical or creative roles, a portfolio link can be the difference between shortlist and rejection.`,
+      section:   tooShort ? 'CV Depth — Expand Your Content' : 'CV Length — Edit for Precision',
+      priority:  tooShort ? 'HIGH' : 'MEDIUM',
+      ats_boost: tooShort ? '+8' : '+5',
+      current:   tooShort
+        ? `CV is ~${wordCount} words — significantly below the 500–800 word target. Fewer words mean fewer keyword matches and weaker signal to ATS engines.`
+        : `CV is ~${wordCount} words — likely 3+ pages. Hiring managers spend 7 seconds on initial screen. Trim to the highest-impact content only.`,
+      examples: [
+        tooShort
+          ? `[For each role, add a block like this:] "Led ${kw1} activities across [scope], using [method/tool] to achieve [outcome]. Collaborated with [team/stakeholders] on ${kw2}, resulting in [measurable improvement]."`
+          : `[Cut older roles to 1–2 bullets:] "Held ${cvTitles?.[0] || 'previous role'} responsibility for ${kw1}; key achievement: [single best result]." — one line per old role is sufficient.`,
+        tooShort
+          ? `[Add a "Key Projects" section:] "PROJECT: ${kw4.charAt(0).toUpperCase() + kw4.slice(1)}\nObjective: [what you aimed to do]\nApproach: Used ${kw2} and ${kw3} methodology\nOutcome: Delivered [result] within [timeframe]."`
+          : `[Remove any bullet that doesn't answer: "is this relevant to ${targetRole}?"] Every line that doesn't prove your fitness for this role is diluting the ones that do.`,
+        tooShort
+          ? `[Expand your skills section too — add tools, methodologies, and domain knowledge:]\n"Skills: ${[...missingSkills, ...presentSkills].slice(0,6).map(s=>s.charAt(0).toUpperCase()+s.slice(1)).join(' · ')}"`
+          : `[Condense your professional summary to 3 sentences max:] "Professional. Specialist in ${kw1}. Targeting ${targetRole}." — brevity signals confidence.`,
+      ],
+      tip: tooShort
+        ? `Each added line is an opportunity for a keyword match. The minimum viable professional CV for any "${targetRole}" role should have at least 2 roles described in detail, a skills list, and a summary.`
+        : `Quality over quantity. A focused 550-word CV beats a padded 1,500-word one every time. Recruiters reward conciseness.`,
     });
   }
 
-  // ── 6. CV Length ──
-  if (wordCount < 350) {
-    suggestions.push({
-      section:   'CV Length & Depth',
-      priority:  'HIGH',
-      ats_boost: '+8',
-      current:   `Your CV is only ~${wordCount} words. This is below the 450–700 word minimum that ATS and recruiters expect for a professional-level application.`,
-      rewrite:   `Expand each role with 3–4 bullet points covering: (1) what you did, (2) how you did it (tools/methods), and (3) the outcome. For "${targetRole}", highlight anything related to ${kw1}, ${kw2}, or ${kw3}.`,
-      tip:       `Thin CVs score poorly on both ATS (fewer keyword matches) and human review (no evidence of depth). Aim for 1–2 full pages of substantive, achievement-focused content.`,
-    });
-  } else if (wordCount > 1400) {
-    suggestions.push({
-      section:   'CV Length — Trim for Impact',
-      priority:  'MEDIUM',
-      ats_boost: '+4',
-      current:   `CV is ~${wordCount} words — likely exceeds 2 pages. Hiring managers skim; every line must earn its place.`,
-      rewrite:   `Cut roles older than 10 years to 1–2 bullet points maximum. Remove generic responsibilities that any CV would have. Keep only achievements directly relevant to "${targetRole}".`,
-      tip:       `Focus ruthlessly on relevance. If a line doesn't help you get the ${targetRole} role, it's occupying valuable space.`,
-    });
-  }
-
-  // ── 7. Keywords in experience section ──
+  // ── 7. Keywords Embedded in Bullets ──
   {
     const topMissing = Object.keys(extractKeywords(jdLower))
       .filter(k => k.length > 5 && !cvLower.includes(k))
-      .slice(0, 5);
-    if (topMissing.length >= 3) {
+      .slice(0, 6);
+    if (topMissing.length >= 2) {
       suggestions.push({
-        section:   'Experience Bullet Points — JD Keywords',
+        section:   'Experience Bullets — JD Keyword Integration',
         priority:  'HIGH',
         ats_boost: '+10',
-        current:   `${topMissing.length} high-frequency JD keywords are absent from your experience bullets: "${topMissing.slice(0,3).join('", "')}"${topMissing.length > 3 ? ' and more' : ''}.`,
-        rewrite:   `Weave these terms naturally into your bullet points. E.g., instead of "Improved team processes", write "Streamlined ${topMissing[0]} workflows, improving team output by 25%." The keyword must appear in full — partial matches don't always count.`,
-        tip:       `Each added keyword from this list has a direct ATS score impact. Prioritise the ones appearing more than twice in the job description.`,
+        current:   `${topMissing.length} high-frequency JD terms are missing from your experience content: "${topMissing.slice(0,3).join('", "')}"${topMissing.length > 3 ? ` and ${topMissing.length - 3} more` : ''}. Each is a direct ATS scoring opportunity.`,
+        examples: [
+          `"Spearheaded ${topMissing[0]} optimisation across the business unit, reducing manual overhead by 28% and enabling the team to handle 40% more volume without additional headcount."`,
+          `"Partnered with senior stakeholders to embed ${topMissing[1] || topMissing[0]} into the quarterly planning cycle, resulting in a 35% improvement in cross-team alignment and faster decision-making."`,
+          `"Designed and implemented a ${topMissing[2] || topMissing[0]}-centric workflow that cut time-to-delivery by 3 weeks, saving approximately £60K per project and elevating client NPS by 12 points."`,
+        ],
+        tip: `Copy these templates and replace the bracketed context with your real experience. Even if your experience isn't a perfect match, framing it using the JD's language is legitimate and effective tailoring.`,
       });
     }
+  }
+
+  // ── 8. LinkedIn / Portfolio ──
+  if (!hasLinkedIn || !hasPortfolio) {
+    const missingItems = [];
+    if (!hasLinkedIn)  missingItems.push('LinkedIn profile URL');
+    if (!hasPortfolio) missingItems.push('GitHub / portfolio / website link');
+    suggestions.push({
+      section:   'Contact Header — Profile Links',
+      priority:  'MEDIUM',
+      ats_boost: '+5',
+      current:   `Missing from your CV header: ${missingItems.join(' and ')}. Many modern ATS platforms score completeness of the contact section, and recruiters expect these links.`,
+      examples: [
+        `[Header line format — clean]\nYour Name  ·  your@email.com  ·  +44 7XXX XXXXXX  ·  linkedin.com/in/yourprofile`,
+        `[Header line format — with portfolio]\nYour Name  |  your@email.com  |  linkedin.com/in/yourprofile  |  github.com/yourusername`,
+        `[Header format — senior/strategic roles]\nYour Name\nyour@email.com  ·  City, Country\nlinkedin.com/in/yourprofile  ·  yourwebsite.com`,
+      ],
+      tip: `LinkedIn is non-negotiable for professional roles — 87% of recruiters check it before calling. For technical, design, or product roles, a portfolio link can be the deciding factor between two equally-matched candidates.`,
+    });
+  }
+
+  // ── 9. Tailored Cover Note Section ──
+  {
+    suggestions.push({
+      section:   'Optional: Targeted Cover Statement',
+      priority:  'MEDIUM',
+      ats_boost: '+6',
+      current:   `Some ATS platforms (and all human reviewers) benefit from a brief "cover note" paragraph inserted at the top of the CV — 3 lines that directly address why you are applying for this specific ${targetRole} role.`,
+      examples: [
+        `"I am applying for the ${targetRole} position because my ${expStr} in ${domain} directly maps to the core responsibilities outlined in the job description. My background in ${kw1} and ${kw2} has prepared me to make an immediate contribution."`,
+        `"The ${targetRole} role at [Company] aligns precisely with my expertise in ${kw3} and ${kw4}. Over the past ${expStr}, I have consistently delivered results in fast-paced, high-accountability environments and I am confident I can replicate and exceed those outcomes here."`,
+        `"Having spent ${expStr} building expertise in ${skillSnippet}, I am drawn to this ${targetRole} opportunity specifically because it requires the combination of ${kw1} leadership and ${kw2} capability that defines my career to date."`,
+      ],
+      tip: `A targeted cover statement at the top of the CV (before the professional summary) is increasingly common. It signals genuine interest and immediately frames your relevance — especially effective when career-changing or applying across industries.`,
+    });
   }
 
   return {
     targetRole,
     domain,
-    suggestions: suggestions.slice(0, 7),
+    suggestions: suggestions.slice(0, 9),
   };
 }
 
