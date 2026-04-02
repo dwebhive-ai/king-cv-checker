@@ -146,6 +146,10 @@ async function analyzeCV(cvText, jobDescription) {
     score_provisions:        generateScoreProvisions(atsScore.score, cvLower, jdLower, keywords),
     rewritten_cv:            rewriteCVContent(cvText, jobDescription),
     role_experience_rewrite: generateRoleExperienceRewrite(cvText, jobDescription),
+    // ── ULTRA-PREMIUM MODULES ──
+    cover_letter:            generateCoverLetter(cvText, jobDescription),
+    ninety_day_plan:         generateNinetyDayPlan(cvText, jobDescription),
+    networking_messages:     generateNetworkingMessages(cvText, jobDescription),
   };
 }
 
@@ -1566,6 +1570,199 @@ function extractEducationLines(cvText) {
     if (inEdu && line.length > 5) result.push(line);
   }
   return result.slice(0, 6);
+}
+
+// ============================================================
+// MODULE 20: COVER LETTER GENERATOR
+// ============================================================
+
+function generateCoverLetter(cvText, jobDescription) {
+  const cvLower = cvText.toLowerCase();
+  const jdLower = jobDescription.toLowerCase();
+
+  const name       = extractCandidateName(cvText);
+  const targetRole = extractJobTitle(jobDescription.trim().split('\n')[0]) || 'the advertised role';
+  const domain     = detectDomain(cvLower, jdLower);
+
+  const allSkills     = [...getTechSkills(), ...getSoftSkills()];
+  const jdSkills      = allSkills.filter(s => jdLower.includes(s));
+  const matchedSkills = jdSkills.filter(s => cvLower.includes(s)).slice(0, 4);
+  const topSkills     = matchedSkills.map(s => s.charAt(0).toUpperCase() + s.slice(1));
+
+  const yearMatches = [...cvText.matchAll(/(\d+)\s*\+?\s*years?/gi)].map(m => parseInt(m[1]));
+  const yearsExp    = yearMatches.length ? Math.max(...yearMatches) : null;
+  const expStr      = yearsExp ? `${yearsExp}+ years` : 'extensive experience';
+
+  const jdKws = Object.keys(extractKeywords(jdLower)).filter(k => k.length > 4).slice(0, 10);
+  const kw1 = jdKws[0] || 'delivering results';
+  const kw2 = jdKws[1] || 'cross-functional collaboration';
+  const kw3 = jdKws[2] || 'strategic thinking';
+
+  const hasMetrics = /\d+%|\d+x|\$[\d,]+/i.test(cvText);
+  const metricEx   = cvText.match(/\d+%|\d+x|\$[\d,]+/i)?.[0] || '30%';
+
+  const companyLine = jobDescription.match(/at\s+([A-Z][a-zA-Z\s&]+?)(?:\.|,|\n|$)/)?.[1]?.trim()
+    || jobDescription.match(/([A-Z][a-zA-Z\s&]{2,30})\s+is\s+(?:looking|hiring|seeking)/)?.[1]?.trim()
+    || 'your organisation';
+
+  const p1 = `I am writing to express my strong interest in the ${targetRole} position${companyLine !== 'your organisation' ? ' at ' + companyLine : ''}. With ${expStr} in ${domain} and a consistent track record of ${kw1}, I am confident that my background aligns closely with the requirements outlined in your job description.`;
+
+  const p2 = topSkills.length
+    ? `Throughout my career, I have built deep expertise in ${topSkills.slice(0,3).join(', ')}${topSkills.length > 3 ? ' and ' + topSkills[3] : ''}. I am particularly proud of ${hasMetrics ? 'delivering measurable results — including improvements of ' + metricEx + ' in key performance areas' : 'consistently driving meaningful outcomes for the organisations I have served'}. My approach centres on ${kw2} and ${kw3}, which I believe are critical competencies for success in the ${targetRole} role.`
+    : `I bring a results-focused mindset and a commitment to ${kw2} and ${kw3}. My approach to every role is to understand the business context first, then apply my expertise in ${domain} to create lasting value. I am highly adaptable and have consistently delivered above expectations across diverse environments.`;
+
+  const p3 = `I would welcome the opportunity to discuss how my skills and experience can contribute to your team's goals. I am available at your convenience for an interview and can be reached via the contact details on my CV. Thank you for your time and consideration — I look forward to the possibility of working together.`;
+
+  return {
+    salutation:  `Dear Hiring Manager,`,
+    opening:     p1,
+    body:        p2,
+    closing:     p3,
+    sign_off:    `Yours sincerely,\n${name !== 'Candidate' ? name : '[Your Name]'}`,
+    subject:     `Application for ${targetRole}${companyLine !== 'your organisation' ? ' — ' + companyLine : ''}`,
+    tip:         `Personalise line 1 with the hiring manager's name if you can find it on LinkedIn. Replace "[Your Name]" with your actual name. Add one specific company achievement or product that excites you in paragraph 3 to show genuine research.`,
+  };
+}
+
+// ============================================================
+// MODULE 21: 30-60-90 DAY PLAN
+// ============================================================
+
+function generateNinetyDayPlan(cvText, jobDescription) {
+  const cvLower = cvText.toLowerCase();
+  const jdLower = jobDescription.toLowerCase();
+
+  const targetRole = extractJobTitle(jobDescription.trim().split('\n')[0]) || 'the role';
+  const domain     = detectDomain(cvLower, jdLower);
+
+  const allSkills  = [...getTechSkills(), ...getSoftSkills()];
+  const jdSkills   = allSkills.filter(s => jdLower.includes(s)).slice(0, 6);
+  const jdKws      = Object.keys(extractKeywords(jdLower)).filter(k => k.length > 4).slice(0, 12);
+
+  const kw1 = jdKws[0] || 'key processes';
+  const kw2 = jdKws[1] || 'team workflows';
+  const kw3 = jdKws[2] || 'stakeholder relationships';
+  const kw4 = jdKws[3] || 'strategic priorities';
+  const sk1 = jdSkills[0] ? jdSkills[0].charAt(0).toUpperCase() + jdSkills[0].slice(1) : 'core tools';
+  const sk2 = jdSkills[1] ? jdSkills[1].charAt(0).toUpperCase() + jdSkills[1].slice(1) : 'key systems';
+
+  return {
+    targetRole,
+    domain,
+    phase1: {
+      label:   'Days 1–30',
+      theme:   'Learn & Listen',
+      color:   'blue',
+      goals:   [
+        `Understand the full scope of the ${targetRole} role and how it fits within the wider ${domain} team`,
+        `Map all key ${kw3} — identify who the primary stakeholders are and what success looks like to them`,
+        `Get up to speed with ${kw1} and internal systems including ${sk1} and ${sk2}`,
+        `Shadow team members to understand current ${kw2} and identify any immediate pain points`,
+        `Complete all onboarding requirements and set up your working environment`,
+      ],
+      actions: [
+        `Schedule 1-on-1 introductions with every direct team member and key cross-functional partner`,
+        `Request access to all relevant dashboards, reports, and documentation for the ${domain} function`,
+        `Document your first impressions and early observations — these are your most valuable insights`,
+        `Identify the top 3 priorities your manager expects you to own in the first quarter`,
+        `Attend all team meetings as a listener — ask smart questions, take detailed notes`,
+      ],
+      milestone: `Deliver a written "onboarding summary" to your manager: what you've learned, your understanding of the role, and your initial hypotheses for improvement.`,
+    },
+    phase2: {
+      label:   'Days 31–60',
+      theme:   'Contribute & Build',
+      color:   'gold',
+      goals:   [
+        `Begin contributing independently to ${kw4} — move from observer to active participant`,
+        `Identify and propose at least one ${kw2} improvement with measurable potential impact`,
+        `Strengthen ${kw3} by delivering on at least two commitments made in your first 30 days`,
+        `Apply ${sk1} and ${sk2} skills to live projects with increasing autonomy`,
+        `Establish your personal working rhythm and communication cadence with the team`,
+      ],
+      actions: [
+        `Take ownership of at least one project or workstream end-to-end`,
+        `Present a short "30-day findings" overview to your manager with 3 actionable recommendations`,
+        `Begin tracking your own KPIs and output — build a personal results dashboard`,
+        `Proactively identify a gap or inefficiency in current ${kw1} and propose a solution`,
+        `Build rapport beyond your immediate team — attend cross-functional meetings and add value`,
+      ],
+      milestone: `Complete your first independent deliverable and receive formal or informal feedback from your manager. Adjust your approach based on that input.`,
+    },
+    phase3: {
+      label:   'Days 61–90',
+      theme:   'Lead & Deliver',
+      color:   'green',
+      goals:   [
+        `Demonstrate measurable impact — have at least one result you can quantify and present`,
+        `Be fully self-sufficient in the ${targetRole} responsibilities without requiring daily guidance`,
+        `Lead at least one initiative, process improvement, or project from start to finish`,
+        `Build a 6-month roadmap for your area of responsibility aligned to ${kw4}`,
+        `Establish yourself as a trusted and dependable presence within the ${domain} team`,
+      ],
+      actions: [
+        `Present your "90-day impact report" — show what you've delivered, learned, and what's next`,
+        `Propose and begin implementing a meaningful improvement to ${kw1} or ${kw2}`,
+        `Proactively take on stretch responsibilities that signal readiness for greater accountability`,
+        `Formalise your KPI tracking and share it with your manager as a transparency tool`,
+        `Set your 6-month goals collaboratively with your manager and agree on success metrics`,
+      ],
+      milestone: `Hold your 90-day review with concrete data — achievements, challenges overcome, and a clear forward plan. This meeting is your first opportunity to accelerate your career trajectory in this role.`,
+    },
+  };
+}
+
+// ============================================================
+// MODULE 22: NETWORKING MESSAGE TEMPLATES
+// ============================================================
+
+function generateNetworkingMessages(cvText, jobDescription) {
+  const cvLower = cvText.toLowerCase();
+  const jdLower = jobDescription.toLowerCase();
+
+  const name       = extractCandidateName(cvText);
+  const displayName = name !== 'Candidate' ? name.split(' ')[0] : '[Your Name]';
+  const targetRole = extractJobTitle(jobDescription.trim().split('\n')[0]) || 'the role';
+  const domain     = detectDomain(cvLower, jdLower);
+
+  const yearMatches = [...cvText.matchAll(/(\d+)\s*\+?\s*years?/gi)].map(m => parseInt(m[1]));
+  const yearsExp    = yearMatches.length ? Math.max(...yearMatches) : null;
+  const expStr      = yearsExp ? `${yearsExp}+ years` : 'a strong background';
+
+  const allSkills  = [...getTechSkills(), ...getSoftSkills()];
+  const matched    = allSkills.filter(s => cvLower.includes(s) && jdLower.includes(s)).slice(0, 3);
+  const sk1        = matched[0] ? matched[0].charAt(0).toUpperCase() + matched[0].slice(1) : domain;
+  const sk2        = matched[1] ? matched[1].charAt(0).toUpperCase() + matched[1].slice(1) : 'strategic delivery';
+
+  const companyLine = jobDescription.match(/at\s+([A-Z][a-zA-Z\s&]+?)(?:\.|,|\n|$)/)?.[1]?.trim()
+    || '[Company Name]';
+
+  return [
+    {
+      type:    'LinkedIn Connection Request (to Recruiter)',
+      subject: `Connection — ${targetRole} applicant`,
+      message: `Hi [Recruiter Name], I recently applied for the ${targetRole} role at ${companyLine} and wanted to connect directly. I have ${expStr} in ${domain} with a focus on ${sk1} and ${sk2}. I'd love to be on your radar — happy to chat if useful. Best, ${displayName}`,
+      tip:     `Keep it under 300 characters for the connection note. No pitch — just a human introduction. Follow up with the InMail after they accept.`,
+    },
+    {
+      type:    'LinkedIn InMail to Hiring Manager',
+      subject: `Re: ${targetRole} at ${companyLine} — Strong Applicant`,
+      message: `Hi [Manager Name],\n\nI applied for the ${targetRole} position at ${companyLine} and wanted to reach out directly. With ${expStr} in ${domain} and proven expertise in ${sk1} and ${sk2}, I'm genuinely excited about the opportunity to contribute to your team.\n\nI noticed [something specific about the company/team you admire — add this!] and it aligns closely with the kind of work I find most meaningful.\n\nWould you be open to a 15-minute call to explore whether there's a fit? I'm flexible and happy to work around your schedule.\n\nBest regards,\n${displayName}`,
+      tip:     `InMails to the hiring manager have a 3–5x higher response rate than applying through ATS alone. Personalise the [specific detail] line — even one sentence of genuine company research transforms this from a template to a conversation.`,
+    },
+    {
+      type:    'Email to Former Colleague (Referral Request)',
+      subject: `Quick favour — referral for ${targetRole} at ${companyLine}`,
+      message: `Hi [Name],\n\nHope you're doing well! I'm reaching out because I've applied for a ${targetRole} position at ${companyLine} and thought of you.\n\nI know it's a big ask, but if you have any connections there or know anyone in the ${domain} space at ${companyLine}, an introduction or even a casual mention would mean a lot. I genuinely think it's a great fit given my background in ${sk1} and ${sk2}.\n\nNo pressure at all if it's not possible — I just wanted to try. Happy to catch up either way and return the favour whenever you need.\n\nThanks so much,\n${displayName}`,
+      tip:     `Referred candidates are 4x more likely to be hired and move through the process faster. Be specific about what you're asking for ("an introduction" vs "any connections") and always make it easy to say no — it increases the chance they say yes.`,
+    },
+    {
+      type:    'LinkedIn Message to Alumni in the Company',
+      subject: `Fellow [University/Industry] — would love your perspective`,
+      message: `Hi [Name],\n\nI came across your profile while researching ${companyLine} — we both share a background in ${domain} and I'm currently applying for the ${targetRole} role there.\n\nI'd love to get your honest perspective on the team culture and what it's like to work in the ${domain} function at ${companyLine}. Even 10 minutes on a call or a few lines by message would be incredibly helpful.\n\nThanks in advance — really appreciate it.\n\n${displayName}`,
+      tip:     `This is a "warm cold outreach" — you're not asking for a referral, just insight. People love sharing their experience and it naturally leads to them championing you internally. Replace [University/Industry] with a genuine common thread.`,
+    },
+  ];
 }
 
 function rewriteSingleBullet(line) {

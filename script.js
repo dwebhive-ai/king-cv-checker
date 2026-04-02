@@ -592,11 +592,16 @@ function renderResults(data) {
   renderCareerLevel(data.career_level, data.salary_insights);
   renderLinkedInHeadline(data.linkedin_headline);
   renderTailoringChecklist(data.tailoring_checklist);
+  renderCoverLetter(data.cover_letter);
+  renderNinetyDayPlan(data.ninety_day_plan);
+  renderNetworkingMessages(data.networking_messages);
   renderScoreProvisions(data.score_provisions, data.ats_score?.score ?? 0);
 
-  // Wire up quick action buttons
-  document.getElementById('downloadReportBtn')?.addEventListener('click', () => generatePDFReport(data));
-  document.getElementById('copyReportBtn')?.addEventListener('click', () => copyFullReport(data));
+  // Wire up quick action buttons (onclick replaces any previous handler — no stacking)
+  const dlBtn = document.getElementById('downloadReportBtn');
+  const cpBtn = document.getElementById('copyReportBtn');
+  if (dlBtn) dlBtn.onclick = () => generatePDFReport(data);
+  if (cpBtn) cpBtn.onclick = () => copyFullReport(data);
 
   // Floating badge
   showFloatingBadge(data.ats_score?.score ?? 0);
@@ -1228,6 +1233,113 @@ function copyExample(btn, text) {
 }
 
 /* ------------------------------------------------------------
+   COVER LETTER GENERATOR
+   ------------------------------------------------------------ */
+function renderCoverLetter(cl) {
+  const el = document.getElementById('coverLetterContent');
+  if (!el) return;
+  if (!cl) { el.innerHTML = '<p>No cover letter data. Ensure your CV has readable content.</p>'; return; }
+
+  const fullText = [cl.salutation, '', cl.opening, '', cl.body, '', cl.closing, '', cl.sign_off].join('\n');
+
+  el.innerHTML = `
+    <div class="cl-subject-row">
+      <span class="cl-subject-label">Subject Line:</span>
+      <span class="cl-subject-text">${escHtml(cl.subject)}</span>
+      <button class="cl-copy-btn" onclick="copyToClipboard('${escHtml(cl.subject).replace(/'/g,'&apos;')}', this)">Copy</button>
+    </div>
+    <div class="cl-body-box" id="clBodyText">
+      <p class="cl-para">${escHtml(cl.salutation)}</p>
+      <p class="cl-para">${escHtml(cl.opening)}</p>
+      <p class="cl-para">${escHtml(cl.body)}</p>
+      <p class="cl-para">${escHtml(cl.closing)}</p>
+      <p class="cl-para cl-signoff">${escHtml(cl.sign_off).replace(/\n/g, '<br>')}</p>
+    </div>
+    <div class="cl-actions">
+      <button class="cl-copy-full-btn" onclick="copyToClipboard(${JSON.stringify(fullText)}, this)">Copy Full Letter</button>
+    </div>
+    <div class="cl-tip"><span class="cl-tip-label">Pro Tip</span> ${escHtml(cl.tip)}</div>
+  `;
+}
+
+/* ------------------------------------------------------------
+   30-60-90 DAY PLAN
+   ------------------------------------------------------------ */
+function renderNinetyDayPlan(plan) {
+  const el = document.getElementById('ninetyDayContent');
+  if (!el) return;
+  if (!plan) { el.innerHTML = '<p>No plan data available.</p>'; return; }
+
+  const phaseColors = { blue: 'plan-blue', gold: 'plan-gold', green: 'plan-green' };
+
+  el.innerHTML = `
+    <p class="plan-intro">Walk into any interview and present this plan — it signals strategic thinking, role readiness, and genuine intent. Hiring managers rarely see candidates this prepared.</p>
+    <div class="plan-phases">${
+      [plan.phase1, plan.phase2, plan.phase3].map(ph => `
+        <div class="plan-phase ${phaseColors[ph.color] || 'plan-blue'}">
+          <div class="plan-phase-header">
+            <span class="plan-phase-label">${escHtml(ph.label)}</span>
+            <span class="plan-phase-theme">${escHtml(ph.theme)}</span>
+          </div>
+          <div class="plan-columns">
+            <div class="plan-col">
+              <div class="plan-col-title">Goals</div>
+              ${ph.goals.map(g => `<div class="plan-row"><span class="plan-dot"></span><span>${escHtml(g)}</span></div>`).join('')}
+            </div>
+            <div class="plan-col">
+              <div class="plan-col-title">Actions</div>
+              ${ph.actions.map(a => `<div class="plan-row"><span class="plan-check">&#10003;</span><span>${escHtml(a)}</span></div>`).join('')}
+            </div>
+          </div>
+          <div class="plan-milestone">
+            <span class="plan-milestone-label">Milestone</span>
+            <span class="plan-milestone-text">${escHtml(ph.milestone)}</span>
+          </div>
+        </div>
+      `).join('')
+    }</div>
+  `;
+}
+
+/* ------------------------------------------------------------
+   NETWORKING MESSAGE TEMPLATES
+   ------------------------------------------------------------ */
+function renderNetworkingMessages(messages) {
+  const el = document.getElementById('networkingContent');
+  if (!el) return;
+  if (!messages || !messages.length) { el.innerHTML = '<p>No networking templates available.</p>'; return; }
+
+  el.innerHTML = `
+    <p class="net-intro">Referred candidates are hired 4x more often. Use these ready-made messages to activate your network for this exact role — personalise the [brackets] and send today.</p>
+    <div class="net-list">${
+      messages.map((m, i) => `
+        <div class="net-item">
+          <div class="net-header">
+            <span class="net-num">${i + 1}</span>
+            <span class="net-type">${escHtml(m.type)}</span>
+            ${m.subject ? `<span class="net-subject">Subject: ${escHtml(m.subject)}</span>` : ''}
+          </div>
+          <div class="net-message-box">
+            <pre class="net-message">${escHtml(m.message)}</pre>
+            <button class="net-copy-btn" onclick="copyToClipboard(${JSON.stringify(m.message)}, this)">Copy Message</button>
+          </div>
+          <div class="net-tip"><span class="net-tip-label">Tip</span> ${escHtml(m.tip)}</div>
+        </div>
+      `).join('')
+    }</div>
+  `;
+}
+
+function copyToClipboard(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+/* ------------------------------------------------------------
    SCORE PROVISIONS (shown when ATS < 70)
    ------------------------------------------------------------ */
 function renderScoreProvisions(provisions, atsScore) {
@@ -1305,7 +1417,7 @@ async function generatePDFReport(data) {
 
     const rgb  = (c, t = 'text') => t === 'fill' ? doc.setFillColor(...c) : t === 'draw' ? doc.setDrawColor(...c) : doc.setTextColor(...c);
     const font = (sz, st = 'normal') => { doc.setFontSize(sz); doc.setFont('helvetica', st); };
-    const txt  = (s, x, xOpts) => doc.text(clean(s), x, y, xOpts);
+    const txt  = (s, x, xOpts) => doc.text(clean(s), x != null ? x : M, y, xOpts);
 
     // ── Footer ──
     function footer() {
@@ -1771,9 +1883,164 @@ async function generatePDFReport(data) {
       });
     }
 
+    // ══════════════════════════════════════════════════════════
+    // PAGE — COVER LETTER
+    // ══════════════════════════════════════════════════════════
+    const cl = data.cover_letter;
+    if (cl) {
+      newPage();
+      rgb(DARK); font(15, 'bold'); doc.text('Cover Letter', M, y); y += 2;
+      rgb(GOLD, 'draw'); doc.setLineWidth(0.7); doc.line(M, y, M + 45, y); y += 4;
+
+      // Subject line pill
+      const subL = doc.splitTextToSize('Subject: ' + clean(cl.subject), CW - 6);
+      rgb([18, 18, 35], 'fill'); doc.roundedRect(M, y - 1, CW, subL.length * 5 + 6, 2, 2, 'F');
+      rgb(GOLD, 'draw'); doc.setLineWidth(0.3); doc.roundedRect(M, y - 1, CW, subL.length * 5 + 6, 2, 2, 'S');
+      rgb(GOLD); font(8, 'bold'); doc.text(subL, M + 4, y + 4); y += subL.length * 5 + 10;
+
+      // Letter body box
+      const paras = [cl.salutation, cl.opening, cl.body, cl.closing, cl.sign_off];
+      const allL  = paras.map(p => doc.splitTextToSize(clean(p), CW - 12));
+      const bodyH = allL.reduce((s, l) => s + l.length * 5.2 + 6, 0) + 10;
+      check(Math.min(bodyH, H - 30));
+      rgb(LGRAY, 'fill'); doc.roundedRect(M, y - 2, CW, Math.min(bodyH, H - y - 15), 2, 2, 'F');
+      rgb(BGRAY, 'draw'); doc.setLineWidth(0.3); doc.roundedRect(M, y - 2, CW, Math.min(bodyH, H - y - 15), 2, 2, 'S');
+      let ly = y + 5;
+      allL.forEach((lines, pi) => {
+        if (ly + lines.length * 5.2 > H - 15) newPage();
+        const isSignoff = pi === allL.length - 1;
+        rgb(isSignoff ? DKGOLD : DARK); font(isSignoff ? 8.5 : 9, isSignoff ? 'bold' : 'normal');
+        doc.text(lines, M + 6, ly); ly += lines.length * 5.2 + 6;
+      });
+      y = ly + 4;
+
+      // Tip
+      const tipL2 = doc.splitTextToSize(clean('Pro Tip: ' + cl.tip), CW - 8);
+      check(tipL2.length * 4.3 + 8);
+      rgb([255, 253, 235], 'fill'); doc.roundedRect(M, y - 2, CW, tipL2.length * 4.3 + 8, 1.5, 1.5, 'F');
+      rgb(GOLD, 'fill'); doc.roundedRect(M, y - 2, 3, tipL2.length * 4.3 + 8, 0.5, 0.5, 'F');
+      rgb(DKGOLD); font(7); doc.text(tipL2, M + 6, y + 3); y += tipL2.length * 4.3 + 12;
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE — 30-60-90 DAY PLAN
+    // ══════════════════════════════════════════════════════════
+    const plan = data.ninety_day_plan;
+    if (plan) {
+      newPage();
+      rgb(DARK); font(15, 'bold'); doc.text('30-60-90 Day Success Plan', M, y); y += 2;
+      rgb(GOLD, 'draw'); doc.setLineWidth(0.7); doc.line(M, y, M + 70, y); y += 4;
+      const introL2 = doc.splitTextToSize('Present this plan in your interview to demonstrate strategic thinking, role readiness, and genuine commitment. Candidates who share a 90-day plan are hired significantly more often.', CW);
+      rgb(MID); font(7.5); doc.text(introL2, M, y); y += introL2.length * 4.5 + 6;
+
+      const phaseColors2 = { blue: LTBLU, gold: [255, 252, 230], green: LTGRN };
+      const phaseAccent  = { blue: BLUE,  gold: GOLD,            green: GREEN };
+
+      [plan.phase1, plan.phase2, plan.phase3].forEach(ph => {
+        const acL = phaseAccent[ph.color] || BLUE;
+        const bgL = phaseColors2[ph.color] || LTBLU;
+
+        // Phase header
+        check(12);
+        rgb(bgL, 'fill'); doc.roundedRect(M, y - 2, CW, 11, 2, 2, 'F');
+        rgb(acL, 'fill'); doc.roundedRect(M, y - 2, 4, 11, 1, 1, 'F');
+        rgb(acL); font(9, 'bold'); doc.text(clean(ph.label + ' — ' + ph.theme), M + 8, y + 5.5); y += 13;
+
+        // Goals column (left half)
+        const hW = (CW - 4) / 2;
+        const gStartY = y;
+        rgb(DARK); font(7.5, 'bold'); doc.text('GOALS', M, y); y += 5;
+        ph.goals.forEach(g => {
+          const gl = doc.splitTextToSize(clean(g), hW - 4);
+          check(gl.length * 4.3 + 3);
+          rgb(DARK, 'fill'); doc.circle(M + 1.5, y - 0.5, 1, 'F');
+          rgb(MID); font(7); doc.text(gl, M + 5, y); y += gl.length * 4.3 + 2;
+        });
+        const gEndY = y;
+
+        // Actions column (right half)
+        y = gStartY;
+        const rx = M + hW + 4;
+        rgb(DARK); font(7.5, 'bold'); doc.text('ACTIONS', rx, y); y += 5;
+        ph.actions.forEach(a => {
+          const al = doc.splitTextToSize(clean(a), hW - 4);
+          check(al.length * 4.3 + 3);
+          rgb(acL); font(7, 'bold'); doc.text('>', rx, y);
+          rgb(MID); font(7); doc.text(al, rx + 4, y); y += al.length * 4.3 + 2;
+        });
+        y = Math.max(y, gEndY) + 2;
+
+        // Milestone strip
+        const msL = doc.splitTextToSize(clean('Milestone: ' + ph.milestone), CW - 10);
+        check(msL.length * 4.3 + 8);
+        rgb(bgL, 'fill'); doc.roundedRect(M, y - 2, CW, msL.length * 4.3 + 8, 1.5, 1.5, 'F');
+        rgb(acL, 'fill'); doc.roundedRect(M, y - 2, 3, msL.length * 4.3 + 8, 0.5, 0.5, 'F');
+        rgb(acL); font(7, 'bold'); doc.text(msL[0] ? 'MILESTONE' : '', M + 6, y + 1.5);
+        rgb(DARK); font(7.5); doc.text(msL, M + 6, y + 6); y += msL.length * 4.3 + 10;
+      });
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // PAGE — NETWORKING MESSAGES
+    // ══════════════════════════════════════════════════════════
+    const msgs = data.networking_messages;
+    if (msgs && msgs.length) {
+      newPage();
+      rgb(DARK); font(15, 'bold'); doc.text('Networking Message Templates', M, y); y += 2;
+      rgb(GOLD, 'draw'); doc.setLineWidth(0.7); doc.line(M, y, M + 80, y); y += 4;
+      const netIntroL = doc.splitTextToSize('Referred candidates are hired 4x more often. Send these today — personalise the [brackets] and activate your network for this specific role.', CW);
+      rgb(MID); font(7.5); doc.text(netIntroL, M, y); y += netIntroL.length * 4.5 + 5;
+
+      const msgBgs = [LTBLU, LTGRN, [255, 252, 230], LGRAY];
+      const msgAcs = [BLUE, GREEN, DKGOLD, MID];
+
+      msgs.forEach((m, mi) => {
+        const typeL = doc.splitTextToSize(clean(m.type), CW - 26);
+        const msgL  = doc.splitTextToSize(clean(m.message), CW - 10);
+        const tipL3 = doc.splitTextToSize(clean('Tip: ' + m.tip), CW - 8);
+        const bkH   = msgL.length * 4.8 + 12;
+        const totH  = typeL.length * 5 + bkH + tipL3.length * 4.3 + 26;
+        check(Math.min(totH, H - 30));
+
+        const bg = msgBgs[mi] || LGRAY;
+        const ac = msgAcs[mi] || MID;
+
+        // Header
+        rgb(bg, 'fill'); doc.roundedRect(M, y - 2, CW, typeL.length * 5 + 8, 2, 2, 'F');
+        rgb(ac, 'fill'); doc.roundedRect(M, y - 2, 4, typeL.length * 5 + 8, 1, 1, 'F');
+        rgb(ac, 'fill'); doc.circle(M + 10, y + 3.5, 4.5, 'F');
+        rgb(WHITE); font(7, 'bold'); doc.text(String(mi + 1), M + 10, y + 5.5, { align: 'center' });
+        rgb(DARK); font(8.5, 'bold'); doc.text(typeL, M + 18, y + 4);
+        y += typeL.length * 5 + 10;
+
+        // Subject line
+        if (m.subject) {
+          const subL2 = doc.splitTextToSize('Subject: ' + clean(m.subject), CW - 8);
+          check(subL2.length * 4.5 + 6);
+          rgb(LGRAY, 'fill'); doc.roundedRect(M, y - 2, CW, subL2.length * 4.5 + 6, 1.5, 1.5, 'F');
+          rgb(ac); font(7, 'bold'); doc.text(subL2, M + 4, y + 2); y += subL2.length * 4.5 + 8;
+        }
+
+        // Message body
+        check(bkH);
+        rgb([245, 245, 250], 'fill'); doc.roundedRect(M, y - 2, CW, bkH, 1.5, 1.5, 'F');
+        rgb(BGRAY, 'draw'); doc.setLineWidth(0.2); doc.roundedRect(M, y - 2, CW, bkH, 1.5, 1.5, 'S');
+        rgb(DARK); font(8, 'normal'); doc.text(msgL, M + 5, y + 3); y += bkH + 3;
+
+        // Tip
+        check(tipL3.length * 4.3 + 8);
+        rgb([255, 253, 235], 'fill'); doc.roundedRect(M, y - 2, CW, tipL3.length * 4.3 + 8, 1.5, 1.5, 'F');
+        rgb(GOLD, 'fill'); doc.roundedRect(M, y - 2, 3, tipL3.length * 4.3 + 8, 0.5, 0.5, 'F');
+        rgb(DKGOLD); font(7); doc.text(tipL3, M + 6, y + 3); y += tipL3.length * 4.3 + 10;
+      });
+    }
+
     // ── Save ──
     doc.save('King-CV-Report-' + Date.now() + '.pdf');
 
+  } catch (err) {
+    console.error('[PDF Error]', err);
+    showGlobalError('PDF generation failed: ' + err.message + '. Please try again.');
   } finally {
     if (btn) { btn.innerHTML = '<span>&#8595;</span> Download Report'; btn.disabled = false; }
   }
